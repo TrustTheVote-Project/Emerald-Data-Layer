@@ -45,14 +45,25 @@ class API < Grape::API
 			# parse and create jurisdiction
 		end
 
-		desc "Add contact info to selected jurisdiction"
+		desc "Display full info on selected jurisdiction"
+		params do
+			# requires :jurisdiction_id, type: String
+		end
+		post :read do
+			# return all data from selected jurisdiction
+
+			# dummy message for testing
+			"jurisdiction data"
+		end
+
+		desc "Update selected jurisdiction"
 		params do
 			# No strings in contact info are 'required,' only assert jurisdiction
 			# id to be modified
 			requires :jurisdiction_id, type: String
 		end
-		post :update_contact_info do
-			# add contact info to jurisdiction
+		post :update do
+			# update given parameters in selected jurisdiction
 
 			# dummy message for testing
 			"updating"
@@ -60,7 +71,6 @@ class API < Grape::API
 	end
 
 	# Precinct methods
-
 	resource :precinct do
 		desc "List precincts of a selected jurisdiction"
 		params do
@@ -85,11 +95,35 @@ class API < Grape::API
 			"creating precinct " + params[:name] + " attached to " + params[:parent_jurisdiction_id]
 		end
 
+		desc "Display full info on selected precinct"
+		params do
+			# not sure if jurisdiction ID is required here
+			requires :parent_jurisdiction_id, type: String
+			requires :precinct_id, type: String
+		end
+		post :read do
+			# display selected precinct info
+
+			# dummy message for testing
+			"precinct info"
+		end
+
+		desc "Update selected precinct"
+		params do
+			# not sure if jurisdiction ID is required here
+			requires :parent_jurisdiction_id, type: String
+			requires :precinct_id, type: String
+		end
+		post :update do
+			# update selected precinct
+
+			#dummy message for testing
+			"updated"
+		end
 	end
 
+
 	# District methods
-
-
 	resource :district do
 
 		desc "List districts of a selected jurisdiction"
@@ -101,6 +135,18 @@ class API < Grape::API
 
 			# dummy message for testing
 			['DISTRICT_1', 'DISTRICT_2', 'DISTRICT_3']
+		end
+
+		desc "List precincts attached to a district from a jurisdiction"
+		params do
+			requires :parent_jurisdiction_id, type: String
+			requires :district_id, type: String
+		end
+		post :list_precincts do
+			# list precincts attached to district from jurisdiction
+
+			# dummy message for testing
+			['PRECINCT_1', 'PRECINCT_2', 'PRECINCT_3']
 		end
 
 		desc "Create district, attached to a jurisdiction"
@@ -115,16 +161,29 @@ class API < Grape::API
 			"creating precinct " + params[:name] + " attached to " + params[:parent_jurisdiction_id]
 		end
 
-		desc "List precincts attached to a district from a jurisdiction"
+		desc "Display district info"
 		params do
 			requires :parent_jurisdiction_id, type: String
 			requires :district_id, type: String
 		end
-		post :list_precincts do
-			# create precinct and attach it to jurisdiction
+		post :read do
+			# display info on the district
 
 			# dummy message for testing
-			['PRECINCT_1', 'PRECINCT_2', 'PRECINCT_3']
+			"district info"
+		end
+
+		desc "Update district"
+		params do
+			# not sure if jurisdiction ID is needed
+			requires :parent_jurisdiction_id, type: String
+			requires :district_id, type: String
+		end
+		post :update do
+			# update info for the district
+
+			# dummy message for testing
+			"updating district"
 		end
 
 		desc "Attach a precinct to a district from a jurisdiction"
@@ -141,5 +200,315 @@ class API < Grape::API
 		end
 
 	end
+
+	resource :election do
+		desc "List all elections under a certain scope"
+		params do
+			requires :jurisdiction_id, type: String
+		end
+		post do
+			# list elections under given jurisdiction
+
+			# dummy message for testing
+			"elections"
+		end
+
+		desc "Create new election"
+		params do
+			requires :election_scope_id, type: String
+			requires :name, type: String
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_type, type: String
+		end
+		post :create do
+			# create a new election
+
+			# dummy message for testing
+			"creating election " + params[:name] + " under jurisdiction " + params[:election_scope_id]
+		end
+
+		desc "Detail one election"
+		params do
+			# requires ?
+			# what ID do we use to reference elections?
+		end
+		post :read do
+			# detail selected election
+
+			# dummy message for testing
+			"election"
+		end
+
+		desc "Update one election"
+		params do
+			# requires ?
+			# same deal as with read above
+		end
+		post :update do
+			# update selected election
+
+			# dummy message for testing
+			"updating"
+		end
+	end
+
+	resource :candidate_contest do
+		desc "List all candidate contests"
+		params do
+			# requires some sort of election ID
+		end
+		post do
+			# list all candidate contests
+
+			# dummy message for testing
+			['CONTEST_1', 'CONTEST_2', 'CONTEST_3']
+		end
+
+		desc "Create candidate contest"
+		params do
+			requires :name, type: String
+			# requires some sort of election ID
+
+			# vssc allows for more than one scope ID, but requires at least 1
+			# not sure if this is the right way to do this
+			requires :jurisdiction_scope_id, type: Array do
+				requires :id1, type: String
+			end
+		end
+		post :create do
+			# create the candidate contest
+
+			# dummy message for testing
+			"creating contest " + params[:name]
+		end
+
+		desc "List detail of a candidate contest"
+		params do
+			# requires some sort of election ID
+			requires :object_id, type: String
+		end
+		post :read do
+			# detail the selected contest
+
+			# dummy message for testing
+			"candidate contest"
+		end
+
+		desc "Update candidate contest"
+		params do
+			# requires some sort of election ID
+			requires :object_id, type: String
+		end
+		post :update do
+			# update the selected contest
+
+			# dummy message for testing
+			"updating candidate contest"
+		end
+	end
+
+	resource :candidate do
+		desc "List all candidates in an election"
+		params do
+			# requires some sort of election ID
+		end
+		post do
+			# list all candidates
+
+			# dummy message for testing
+			['CANDIDATE_1', 'CANDIDATE_2', 'CANDIDATE_3']
+		end
+
+		desc "Create a candidate"
+		params do
+			# requires some sort of election ID
+			requires :ballot_name, type: String
+		end
+		post :create do
+			# create candidate
+
+			# dummy message for testing
+			"creating candidate " + params[:ballot_name]
+		end
+
+		desc "Detail a candidate"
+		params do
+			# requires some sort of election ID
+			requires :object_id, type: String
+		end
+		post :read do
+			# detail the candidate
+
+			# dummy message for testing
+			"candidate"
+		end
+
+		desc "Update a candidate"
+		params do
+			# requires some sort of election ID
+			requires :object_id, type: String
+		end
+		post :update do
+			# update the candidate
+
+			# dummy message for testing
+			"updating candidate"
+		end
+	end
+
+	resource :party do
+		desc "List all parties"
+		get do
+			# list all defined parties
+
+			# dummy message for testing
+			['PARTY_1', 'PARTY_2', 'PARTY_3']
+		end
+
+		desc "Create a new party"
+		params do
+			requires :name, type: String
+		end
+		post :create do
+			# create party
+
+			# dummy message for testing
+			"creating party " + params[:name]
+		end
+
+		desc "Detail a party"
+		params do
+			requires :object_id, type: String
+		end
+		post :read do
+			# detail party
+
+			# dummy message for testing
+			"party"
+		end
+
+		desc "Update a party"
+		params do
+			requires :object_id, type: String
+		end
+		post :update do
+			# update party
+
+			# dummy message for testing
+			"updating party"
+		end
+	end
+
+	resource :ballot_measure_contest do
+		desc "List all ballot measure contests"
+		params do
+			# requires some sort of election ID
+		end
+		post do
+			# list all candidate contests
+
+			# dummy message for testing
+			['CONTEST_1', 'CONTEST_2', 'CONTEST_3']
+		end
+
+		desc "Create ballot measure contest"
+		params do
+			requires :name, type: String
+			# requires some sort of election ID
+
+			# vssc allows for more than one scope ID, but requires at least 1
+			# not sure if this is the right way to do this
+			requires :jurisdiction_scope_id, type: Array do
+				requires :id1, type: String
+			end
+		end
+		post :create do
+			# create the ballot measure contest
+
+			# dummy message for testing
+			"creating contest " + params[:name]
+		end
+
+		desc "List detail of a ballot measure contest"
+		params do
+			# requires some sort of election ID
+			requires :object_id, type: String
+		end
+		post :read do
+			# detail the selected contest
+
+			# dummy message for testing
+			"ballot measure contest"
+		end
+
+		desc "Update ballot measure contest"
+		params do
+			# requires some sort of election ID
+			requires :object_id, type: String
+		end
+		post :update do
+			# update the selected contest
+
+			# dummy message for testing
+			"updating ballot measure contest"
+		end
+	end
+
+	resource :ballot_measure_selection do
+		"List all ballot measure selections for a contest"
+		params do
+			# requires some sort of election ID
+			requires :contest_object_id, type: String
+		end
+		post do
+			# list selections for a contest
+
+			# dummy message for testing
+			['SELECTION_1', 'SELECTION_2']
+		end
+
+		desc "Create a ballot measure selection"
+		params do
+			# requires some sort of election ID
+			requires :contest_object_id, type: String
+			requires :selection, type: String
+		end
+		post :create do
+			# create a ballot measure selection
+
+			# dummy message for testing
+			"creating selection " + params[:selection] + " in contest " + params[:object_id]
+		end
+
+		desc "Detail a ballot measure selection"
+		params do
+			# requires some sort of election ID
+			requires :contest_object_id, type: String
+			requires :selection_object_id, type: String
+		end
+		post :read do
+			# detail the selected selection
+
+			# dummy message for testing
+			"selection"
+		end
+
+		desc "Update a ballot measure selection"
+		params do
+			# requires some sort of election ID
+			requires :contest_object_id, type: String
+			requires :selection_object_id, type: String
+		end
+		post :update do
+			# update the selected selection
+
+			# dummy message for testing
+			"updating"
+		end
+	end
+
+	# list all contests?
 
 end
