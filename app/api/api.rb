@@ -20,8 +20,8 @@ class API < Grape::API
 		get do
 			# return list of name, ID of each jurisdiction
 
-			# dummy message for testing
-			"OK"
+			# Flintstones test message
+			[['Cobblestone County','COUNTY_Cobblestone_County'],['City of Bedrock', 'CITY_Bedrock']]
 		end
 
 		desc "List districts under a jurisdiction"
@@ -31,8 +31,12 @@ class API < Grape::API
 		post :list_districts do
 			# list districts attached to given jurisdiction
 
-			# dummy message for testing
-			['DISTRICT_1', 'DISTRICT_2', 'DISTRICT_3']
+			# Flintstones test message
+			if params[:object_id] == "COUNTY_Cobblestone_County"
+				[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
+			else
+				"error"
+			end
 		end
 
 		desc "List all subunits of a jurisdiction, such as listing counties and districts of a state"
@@ -42,8 +46,18 @@ class API < Grape::API
 		post :list_subunits do
 			# list all subunits
 
-			# dummy message for testing
-			['COUNTY_1', 'DISTRICT_1', 'DISTRICT_2']
+			# Flintstones test message
+			if params[:object_id] == "COUNTY_Cobblestone_County"
+				[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
+			elsif params[:object_id] == "DISTRICT_TOWNBE"
+				[['Downtown-001'],['Quarrytown-002']]
+			elsif params[:object_id] == "DISTRICT_CBLCTY"
+				[['Downtown-001'],['Quarrytown-002'],['QuarryCounty-003'],['County-004']]
+			elsif params[:object_id] == "DISTRICT_MINERL"
+				[['Quarrytown-002'],['QuarryCounty-003']]
+			else
+				"error"
+			end
 		end
 
 		desc "Create new jurisdiction, manually inputting parameters."
@@ -119,11 +133,32 @@ class API < Grape::API
 	# Precinct methods
 	resource :precinct do
 		desc "List all precincts"
-		post do
+		get do
 			# list precints
 
-			# dummy message for testing
-			['PRECINCT_1', 'PRECINCT_2', 'PRECINCT_3']
+			# Flintstones test message
+			['Downtown-001', 'Quarrytown-002', 'QuarryCounty-003', 'County-004']
+		end
+
+		desc "List districts attached to precinct"
+		params do
+			requires :object_id, type: String
+		end
+		post :list_districts do
+			# list districts attached to given precinct
+
+			# Flintstones test message
+			if params[:object_id] == "Downtown-001"
+				[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY']]
+			elsif params[:object_id] == "Quarrytown-002"
+				[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
+			elsif params[:object_id] == "QuarryCounty-003"
+				[['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
+			elsif params[:object_id] == "County-004"
+				[['Cobblestone County','DISTRICT_CBLCTY']]
+			else
+				"error"
+			end
 		end
 
 		desc "Create precinct"
@@ -166,8 +201,8 @@ class API < Grape::API
 		get do
 			# list districts
 
-			# dummy message for testing
-			['DISTRICT_1', 'DISTRICT_2', 'DISTRICT_3']
+			# Flintstones test message
+			[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
 		end
 
 		desc "List precincts attached to a district"
@@ -177,8 +212,16 @@ class API < Grape::API
 		post :list_precincts do
 			# list precincts attached to district from jurisdiction
 
-			# dummy message for testing
-			['PRECINCT_1', 'PRECINCT_2', 'PRECINCT_3']
+			if params[:object_id] == "DISTRICT_TOWNBE"
+				['Downtown-001','Quarrytown-002']
+			elsif params[:object_id] == "DISTRICT_CBLCTY"
+				['Downtown-001','Quarrytown-002','QuarryCounty-003','County-004']
+				#params[:object_id]
+			elsif params[:object_id] == "DISTRICT_MINERL"
+				['Quarrytown-002','QuarryCounty-003']
+			else
+				"error"
+			end
 		end
 
 		desc "Create district"
@@ -617,7 +660,7 @@ class API < Grape::API
 		end
 	end
 
-	resouce :ordered_contest do
+	resource :ordered_contest do
 		desc "List all ordered contests"
 		params do
 			requires :election_id, type: String
@@ -629,6 +672,7 @@ class API < Grape::API
 			# dummy message for testing
 			['CANDIDATE_1', 'CANDIDATE_2', 'CANDIDATE_3']
 		end
+
 
 		desc "Create an ordered contest"
 		params do
@@ -643,7 +687,6 @@ class API < Grape::API
 			# dummy message for testing
 			"creating ordered contest"
 		end
-
 		desc "Detail an ordered contest"
 		params do
 			requires :election_id, type: String
@@ -656,7 +699,6 @@ class API < Grape::API
 			# dummy message for testing
 			"ordered contest"
 		end
-
 		desc "Update an ordered contest"
 		params do
 			requires :election_id, type: String
@@ -669,6 +711,7 @@ class API < Grape::API
 			# dummy message for testing
 			"updating ordered contest"
 		end
+	end
 
 	resource :office do
 		desc "List all offices"
