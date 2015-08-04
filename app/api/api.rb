@@ -13,6 +13,15 @@ class API < Grape::API
 	# If just post do, then .../api/v1/hello
 
 
+
+	helpers do
+		# error message for when an object is asked for and it does not exist in the database
+		def error_not_found(object_id)
+			error!('404 Object ' + object_id + ' not found', 404)
+		end
+	end
+
+
 	# Jurisdiction methods
 	resource :jurisdiction do
 
@@ -35,7 +44,7 @@ class API < Grape::API
 			if params[:object_id] == "COUNTY_Cobblestone_County"
 				[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
 			else
-				"error"
+				error_not_found(params[:object_id])
 			end
 		end
 
@@ -56,7 +65,7 @@ class API < Grape::API
 			elsif params[:object_id] == "DISTRICT_MINERL"
 				[['Quarrytown-002'],['QuarryCounty-003']]
 			else
-				"error"
+				error_not_found(params[:object_id])
 			end
 		end
 
@@ -157,7 +166,7 @@ class API < Grape::API
 			elsif params[:object_id] == "County-004"
 				[['Cobblestone County','DISTRICT_CBLCTY']]
 			else
-				"error"
+				error_not_found(params[:object_id])
 			end
 		end
 
@@ -220,7 +229,7 @@ class API < Grape::API
 			elsif params[:object_id] == "DISTRICT_MINERL"
 				['Quarrytown-002','QuarryCounty-003']
 			else
-				"error"
+				error_not_found(params[:object_id])
 			end
 		end
 
