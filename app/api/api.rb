@@ -15,9 +15,23 @@ class API < Grape::API
 
 
 	helpers do
+		# Error messages are defined in here
+		# Messages with error() come out with the given HTTP code,
+		# and have a json body of a single string:
+		# {"error":"message"}
+
+		# When a requires in a params fails, it is formatted:
+		# "{"error":"object_1 is missing, object_2 is missing"
+
+
 		# error message for when an object is asked for and it does not exist in the database
 		def error_not_found(object_id)
-			error!('404 Object ' + object_id + ' not found', 404)
+			error!('Object not found: ' + object_id, 404)
+		end
+
+		# error message for when creating an object and the ID already exists in another object
+		def error_already_exists(object_id)
+			error!('Object already exists: ' + object_id, 409)
 		end
 	end
 
@@ -29,8 +43,10 @@ class API < Grape::API
 		get do
 			# return list of name, ID of each jurisdiction
 
+			# error for empty list of items in database?
+
 			# Flintstones test message
-			[['Cobblestone County','COUNTY_Cobblestone_County'],['City of Bedrock', 'CITY_Bedrock']]
+			[['Cobblestone County','COUNTY_Cobblestone_County']]
 		end
 
 		desc "List districts under a jurisdiction"
@@ -71,15 +87,19 @@ class API < Grape::API
 
 		desc "Create new jurisdiction, manually inputting parameters."
 		params do
-			requires :object_id, type: String
-			requires :type, type: String
+			requires :ocdid, type: String
+			requires :name, type: String
+			requires :elorg_name, type: String
 		end
 		post :create do
 			# create jurisdiction
 			# params allowed are those defined in VSSC for ReportingUnit
 
-			# dummy message for testing
-			"creating jurisdiction"
+			if params[:ocdid] == "COUNTY_Cobblestone_County"
+			# error if object already exists
+				error_already_exists(params[:ocdid])
+			end
+
 		end
 
 		desc "Import jurisdiction"
@@ -98,6 +118,11 @@ class API < Grape::API
 		post :read do
 			# return all data from selected jurisdiction
 
+			# error if object does not exist
+			if params[:object_id] != "COUNTY_Cobblestone_County"
+				error_not_found(params[:object_id])
+			end
+
 			# dummy message for testing
 			"jurisdiction data"
 		end
@@ -108,6 +133,11 @@ class API < Grape::API
 		end
 		post :update do
 			# update given parameters in selected jurisdiction
+
+			# error if object does not exist
+			if params[:object_id] != "COUNTY_Cobblestone_County"
+				error_not_found(params[:object_id])
+			end
 
 			# dummy message for testing
 			"updating"
@@ -122,6 +152,16 @@ class API < Grape::API
 		post :attach do
 			# attach to the given jurisdiction
 
+			# error if object does not exist
+			if params[:object_id] != "COUNTY_Cobblestone_County"
+				error_not_found(params[:object_id])
+			end
+
+			# error if child object does not exist
+			if params[:child_id] != "DISTRICT_TOWNBE" && params[:child_id] != "DISTRICT_CBLCTY" && params[:child_id] != "DISTRICT_MINERL" 
+				error_not_found(params[:child_id])
+			end
+
 			# dummy message for testing
 			"attaching"
 		end
@@ -134,8 +174,18 @@ class API < Grape::API
 		post :detach do
 			# detach the current child
 
+			# error if object does not exist
+			if params[:object_id] != "COUNTY_Cobblestone_County"
+				error_not_found(params[:object_id])
+			end
+
+			# error if child object does not exist
+			if params[:child_id] != "DISTRICT_TOWNBE" && params[:child_id] != "DISTRICT_CBLCTY" && params[:child_id] != "DISTRICT_MINERL" 
+				error_not_found(params[:child_id])
+			end
+
 			# dummy message for testing
-			"attaching"
+			"detaching"
 		end
 	end
 
@@ -177,6 +227,9 @@ class API < Grape::API
 		post :create do
 			# create precinct
 
+			# error if object already exists
+			#error_already_exists(params[:object_id])
+
 			# dummy message for testing
 			"creating precinct"
 		end
@@ -188,6 +241,9 @@ class API < Grape::API
 		post :read do
 			# display selected precinct info
 
+			# error if object does not exist
+			#error_not_found(params[:object_id])
+
 			# dummy message for testing
 			"precinct info"
 		end
@@ -198,6 +254,9 @@ class API < Grape::API
 		end
 		post :update do
 			# update selected precinct
+
+			# error if object does not exist
+			#error_not_found(params[:object_id])
 
 			# dummy message for testing
 			"updated"
@@ -239,6 +298,9 @@ class API < Grape::API
 		end
 		post :create do
 			# create precinct and attach it to jurisdiction
+
+			# error if object already exists
+			#error_already_exists(params[:object_id])
 
 			# dummy message for testing
 			"creating district"
