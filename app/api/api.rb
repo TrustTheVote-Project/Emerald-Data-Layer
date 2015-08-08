@@ -15,6 +15,8 @@ class API < Grape::API
 
 
 	helpers do
+
+
 		# Error messages are defined in here
 		# Messages with error() come out with the given HTTP code,
 		# and have a json body of a single string:
@@ -32,6 +34,60 @@ class API < Grape::API
 		# error message for when creating an object and the ID already exists in another object
 		def error_already_exists(object_id)
 			error!('Object already exists: ' + object_id, 409)
+		end
+
+		# error if object is empty
+		# unsure about HTTP code
+		def error_empty(object_id)
+			error!('Object is empty: ' + object_id, 400)
+		end
+
+		# error if object is invalid
+		def error_invalid(object_id)
+			error!('Object is invalid: ' + object_id, 400)
+		end
+
+		# error if validate_string_name returns false
+		def error_invalid_input(type, value)
+			error!(type + ' is invalid: ' + value, 400)
+		end
+
+		# error for if object ID exists, but is not the right type of object for what is expected?
+
+		# error for empty list of items in database?
+
+
+		# Validation methods
+
+		# validate if string is proper for a name
+		# at this time only validates if it is printable
+		def validate_string_name(string)
+			# inspect adds \ to all nonprintable characters and adds \" at each end
+			# so compare to normal string with "\"" added to each end
+			if !string_printable(string)
+				error_invalid_input("name", string)
+			end
+		end
+
+		# validate if OCDID is formatted properly
+
+		def validate_ocdid(ocdid)
+			if !string_printable(ocdid) || !string_ocdid(ocdid)
+				error_invalid_input("ocdid",ocdid)
+			end
+		end
+
+		# Helpers for validations
+
+		# if string is printable (does not contain any characters that must normally be represented in escape)
+		def string_printable(string)
+			string.inspect == "\"" + string + "\""
+		end
+
+		# if string does not contain strange punctuation that would not work in an OCDID
+		def string_ocdid(ocdid)
+			str = ['!','"','#','$','%','(',')','*','+',',','-','.','/',':',';','<','=','>','?','@','[','\\',']','`','{','|','}','~']
+			!str.any? { |word| ocdid.include?(word) }
 		end
 	end
 
@@ -51,7 +107,7 @@ class API < Grape::API
 
 		desc "List districts under a jurisdiction"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :list_districts do
 			# list districts attached to given jurisdiction
@@ -66,7 +122,7 @@ class API < Grape::API
 
 		desc "List all subunits of a jurisdiction, such as listing counties and districts of a state"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :list_subunits do
 			# list all subunits
@@ -87,25 +143,27 @@ class API < Grape::API
 
 		desc "Create new jurisdiction, manually inputting parameters."
 		params do
-			requires :ocdid, type: String
+			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
 			requires :elorg_name, type: String
 		end
 		post :create do
-			# create jurisdiction
-			# params allowed are those defined in VSSC for ReportingUnit
-
+			validate_string_name(params[:name])
+			validate_string_name(params[:elorg_name])
+			validate_ocdid(params[:object_id])
 			if params[:ocdid] == "COUNTY_Cobblestone_County"
 			# error if object already exists
 				error_already_exists(params[:ocdid])
+			else
+				# create jurisdiction
+				# params allowed are those defined in VSSC for ReportingUnit
 			end
-
 		end
 
 		desc "Import jurisdiction"
 		params do
 			# only the data string
-			requires :info, type: String
+			requires :info, type: String, allow_blank: false
 		end
 		post :import do
 			# parse and create jurisdiction
@@ -113,7 +171,7 @@ class API < Grape::API
 
 		desc "Display full info on selected jurisdiction"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# return all data from selected jurisdiction
@@ -129,7 +187,7 @@ class API < Grape::API
 
 		desc "Update selected jurisdiction"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update given parameters in selected jurisdiction
@@ -146,8 +204,8 @@ class API < Grape::API
 		desc "Attach child to jurisdiction. This can be attaching a jurisdiction to another, such as
 		setting a county as a child of a state. This also can be attaching a precinct or district."
 		params do
-			requires :object_id, type: String
-			requires :child_id, type: String
+			requires :object_id, type: String, allow_blank: false
+			requires :child_id, type: String, allow_blank: false
 		end
 		post :attach do
 			# attach to the given jurisdiction
@@ -168,24 +226,23 @@ class API < Grape::API
 
 		desc "Detach a child element from a jurisdiction."
 		params do
-			requires :object_id, type: String
-			requires :child_id, type: String
+			requires :object_id, type: String, allow_blank: false
+			requires :child_id, type: String, allow_blank: false
 		end
 		post :detach do
-			# detach the current child
 
 			# error if object does not exist
 			if params[:object_id] != "COUNTY_Cobblestone_County"
 				error_not_found(params[:object_id])
-			end
-
-			# error if child object does not exist
-			if params[:child_id] != "DISTRICT_TOWNBE" && params[:child_id] != "DISTRICT_CBLCTY" && params[:child_id] != "DISTRICT_MINERL" 
+			elsif params[:child_id] != "DISTRICT_TOWNBE" && params[:child_id] != "DISTRICT_CBLCTY" && params[:child_id] != "DISTRICT_MINERL" 
+				# error if child object does not exist
 				error_not_found(params[:child_id])
-			end
+			else
+				# detach the current child
 
-			# dummy message for testing
-			"detaching"
+				# dummy message for testing
+				"detaching"
+			end
 		end
 	end
 
@@ -201,7 +258,7 @@ class API < Grape::API
 
 		desc "List districts attached to precinct"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :list_districts do
 			# list districts attached to given precinct
@@ -222,9 +279,10 @@ class API < Grape::API
 
 		desc "Create precinct"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid(params[:object_id])
 			# create precinct
 
 			# error if object already exists
@@ -236,7 +294,7 @@ class API < Grape::API
 
 		desc "Display full info on selected precinct"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# display selected precinct info
@@ -250,7 +308,7 @@ class API < Grape::API
 
 		desc "Update selected precinct"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update selected precinct
@@ -275,7 +333,7 @@ class API < Grape::API
 
 		desc "List precincts attached to a district"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :list_precincts do
 			# list precincts attached to district from jurisdiction
@@ -294,9 +352,10 @@ class API < Grape::API
 
 		desc "Create district"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid(params[:object_id])
 			# create precinct and attach it to jurisdiction
 
 			# error if object already exists
@@ -308,7 +367,7 @@ class API < Grape::API
 
 		desc "Display district info"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# display info on the district
@@ -320,7 +379,7 @@ class API < Grape::API
 		desc "Update district"
 		params do
 			# not sure if jurisdiction ID is needed
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update info for the district
@@ -331,8 +390,8 @@ class API < Grape::API
 
 		desc "Attach a precinct to a district"
 		params do
-			requires :object_id, type: String
-			requires :precinct_id, type: String
+			requires :object_id, type: String, allow_blank: false
+			requires :precinct_id, type: String, allow_blank: false
 		end
 		post :attach_precinct do
 			# attach precinct to district
@@ -353,7 +412,7 @@ class API < Grape::API
 
 		desc "List all elections under a certain scope"
 		params do
-			requires :jurisdiction_id, type: String
+			requires :jurisdiction_id, type: String, allow_blank: false
 		end
 		post do
 			# list elections under given jurisdiction
@@ -371,6 +430,7 @@ class API < Grape::API
 			requires :name, type: String
 		end
 		post :create do
+			validate_string_name(params[:name])
 			# create a new election
 
 			# dummy message for testing
@@ -379,7 +439,7 @@ class API < Grape::API
 
 		desc "Detail one election"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail selected election
@@ -390,7 +450,7 @@ class API < Grape::API
 
 		desc "Update one election"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update selected election
@@ -403,7 +463,7 @@ class API < Grape::API
 	resource :candidate_contest do
 		desc "List all candidate contests under an election"
 		params do
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
 			# list all candidate contests
@@ -415,7 +475,7 @@ class API < Grape::API
 		desc "Create candidate contest"
 		params do
 			requires :name, type: String
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 			requires :votes_allowed, type: Integer
 
 			# vssc allows for more than one scope ID, but requires at least 1
@@ -423,6 +483,7 @@ class API < Grape::API
 			requires :jurisdiction_scope_id, type: Array
 		end
 		post :create do
+			validate_string_name(params[:name])
 			# create the candidate contest
 
 			# dummy message for testing
@@ -431,8 +492,8 @@ class API < Grape::API
 
 		desc "List detail of a candidate contest"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the selected contest
@@ -443,8 +504,8 @@ class API < Grape::API
 
 		desc "Update candidate contest"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the selected contest
@@ -455,9 +516,9 @@ class API < Grape::API
 
 		desc "Attach an office to contest"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
-			requires :office_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
+			requires :office_id, type: String, allow_blank: false
 		end
 		post :attach_office do
 			# attach the office
@@ -470,7 +531,7 @@ class API < Grape::API
 	resource :candidate do
 		desc "List all candidates in an election"
 		params do
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
 			# list all candidates
@@ -481,11 +542,13 @@ class API < Grape::API
 
 		desc "Create a candidate"
 		params do
-			requires :object_id, type: String
-			requires :election_id, type: String
+			requires :object_id, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ballot_name, type: String
 		end
 		post :create do
+			validate_ocdid(params[:object_id])
+			validate_string_name(params[:ballot_name])
 			# create candidate
 
 			# dummy message for testing
@@ -494,8 +557,8 @@ class API < Grape::API
 
 		desc "Detail a candidate"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the candidate
@@ -506,8 +569,8 @@ class API < Grape::API
 
 		desc "Update a candidate"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the candidate
@@ -528,10 +591,12 @@ class API < Grape::API
 
 		desc "Create a new party"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 			requires :name, type: String
 		end
 		post :create do
+			validate_ocdid(params[:object_id])
+			validate_string_name(params[:name])
 			# create party
 
 			# dummy message for testing
@@ -540,7 +605,7 @@ class API < Grape::API
 
 		desc "Detail a party"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail party
@@ -551,7 +616,7 @@ class API < Grape::API
 
 		desc "Update a party"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update party
@@ -564,7 +629,7 @@ class API < Grape::API
 	resource :ballot_measure_contest do
 		desc "List all ballot measure contests"
 		params do
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
 			# list all candidate contests
@@ -576,7 +641,7 @@ class API < Grape::API
 		desc "Create ballot measure contest"
 		params do
 			requires :name, type: String
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 			requires :ballot_measure_type, type: String
 
 			# vssc allows for more than one scope ID, but requires at least 1
@@ -584,6 +649,7 @@ class API < Grape::API
 			requires :jurisdiction_scope_id, type: Array
 		end
 		post :create do
+			validate_string_name(params[:name])
 			# create the ballot measure contest
 
 			# dummy message for testing
@@ -592,8 +658,8 @@ class API < Grape::API
 
 		desc "List detail of a ballot measure contest"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the selected contest
@@ -604,8 +670,8 @@ class API < Grape::API
 
 		desc "Update ballot measure contest"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the selected contest
@@ -618,8 +684,8 @@ class API < Grape::API
 	resource :ballot_measure_selection do
 		desc "List all ballot measure selections for a contest"
 		params do
-			requires :election_id, type: String
-			requires :contest_object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
 		end
 		post do
 			# list selections for a contest
@@ -630,8 +696,8 @@ class API < Grape::API
 
 		desc "Create a ballot measure selection"
 		params do
-			requires :election_id, type: String
-			requires :contest_object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
 			requires :selection, type: String
 		end
 		post :create do
@@ -643,9 +709,9 @@ class API < Grape::API
 
 		desc "Detail a ballot measure selection"
 		params do
-			requires :election_id, type: String
-			requires :contest_object_id, type: String
-			requires :selection_object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
+			requires :selection_object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the selected selection
@@ -656,9 +722,9 @@ class API < Grape::API
 
 		desc "Update a ballot measure selection"
 		params do
-			requires :election_id, type: String
-			requires :contest_object_id, type: String
-			requires :selection_object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
+			requires :selection_object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the selected selection
@@ -671,7 +737,7 @@ class API < Grape::API
 	resource :contest do
 		desc "List all contests under a certain election, both candidate and ballot measure"
 		params do
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
 			# return all contests
@@ -684,7 +750,7 @@ class API < Grape::API
 	resource :ballot_style do
 		desc "List all ballot styles of an election"
 		params do
-			requires :election_id, type: String
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
 			# return all ballot styles of that election
@@ -695,11 +761,12 @@ class API < Grape::API
 
 		desc "Create a new ballot style"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
-			requires :gpunit_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
+			requires :gpunit_id, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid(params[:object_id])
 			# create a new ballot style
 
 			# dummy message for testing
@@ -708,8 +775,8 @@ class API < Grape::API
 
 		desc "Detail a ballot style"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the selected ballot style
@@ -720,8 +787,8 @@ class API < Grape::API
 
 		desc "Update a ballot style"
 		params do
-			requires :election_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the selected ballot style
@@ -734,8 +801,8 @@ class API < Grape::API
 	resource :ordered_contest do
 		desc "List all ordered contests"
 		params do
-			requires :election_id, type: String
-			requires :ballot_style_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :ballot_style_id, type: String, allow_blank: false
 		end
 		post do
 			# list all ordered contests
@@ -747,10 +814,10 @@ class API < Grape::API
 
 		desc "Create an ordered contest"
 		params do
-			requires :election_id, type: String
-			requires :ballot_style_id, type: String
-			requires :object_id, type: String
-			requires :contest_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :ballot_style_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
+			requires :contest_id, type: String, allow_blank: false
 		end
 		post :create do
 			# create an ordered contest
@@ -760,9 +827,9 @@ class API < Grape::API
 		end
 		desc "Detail an ordered contest"
 		params do
-			requires :election_id, type: String
-			requires :ballot_style_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :ballot_style_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the ordered contest
@@ -772,9 +839,9 @@ class API < Grape::API
 		end
 		desc "Update an ordered contest"
 		params do
-			requires :election_id, type: String
-			requires :ballot_style_id, type: String
-			requires :object_id, type: String
+			requires :election_id, type: String, allow_blank: false
+			requires :ballot_style_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the selected contest
@@ -795,10 +862,11 @@ class API < Grape::API
 
 		desc "Create a new office"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 			requires :name, type: String
 		end
 		post :create do
+			validate_string_name(params[:name])
 			# create a new office
 
 			# dummy message for testing
@@ -807,7 +875,7 @@ class API < Grape::API
 
 		desc "Detail an office"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			# detail the office
@@ -818,7 +886,7 @@ class API < Grape::API
 
 		desc "Update an office"
 		params do
-			requires :object_id, type: String
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :update do
 			# update the office
