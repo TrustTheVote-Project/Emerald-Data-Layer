@@ -40,6 +40,10 @@ class API < Grape::API
 	data_referendum_response_yes = [['desc','Yes'],['ocdid',ocd_referendum_response_yes]]
 	data_contest_mayor = [['desc','Bedrock Mayor'],['ocdid',ocd_contest_mayor]]
 	data_quarry_comm = [['desc','Cobblestone County Commissioner'],['ocdid',ocd_quarry_comm]]
+	data_precinct_Downtown001 = [['ocdid',ocd_Downtown001]]
+	data_precinct_Quarrytown002 = [['ocdid',ocd_Quarrytown002]]
+	data_precinct_QuarryCounty003 = [['ocdid',ocd_QuarryCounty003]]
+	data_precinct_County004 = [['ocdid',ocd_County004]]
 
 	helpers do
 
@@ -111,9 +115,9 @@ class API < Grape::API
 			string.inspect == "\"" + string + "\""
 		end
 
-		# if string does not contain strange punctuation that would not work in an OCDID
+		# if string does not contain strange punctuation that would not work in an OCDID - only allowed punctuation is -, _, /, and :
 		def string_ocdid(ocdid)
-			str = ['!','"','#','$','%','(',')','*','+',',','-','.','/',':',';','<','=','>','?','@','[','\\',']','`','{','|','}','~']
+			str = ['!','"','#','$','%','(',')','*','+',',','.',';','<','=','>','?','@','[','\\',']','`','{','|','}','~']
 			!str.any? { |word| ocdid.include?(word) }
 		end
 	end
@@ -323,12 +327,19 @@ class API < Grape::API
 		end
 		post :read do
 			# display selected precinct info
-
-			# error if object does not exist
-			#error_not_found(params[:ocdid])
-
-			# dummy message for testing
-			"precinct info"
+			case params[:ocdid]
+			when ocd_Downtown001
+				data_precinct_Downtown001
+			when ocd_Quarrytown002
+				data_precinct_Quarrytown002
+			when ocd_QuarryCounty003
+				data_precinct_QuarryCounty003
+			when ocd_County004
+				data_precinct_County004
+			else
+				# error if object does not exist
+				error_not_found(params[:ocdid])
+			end
 		end
 
 		desc "Update selected precinct"
@@ -353,7 +364,7 @@ class API < Grape::API
 			# list districts
 
 			# Flintstones test message
-			[['City of Bedrock','DISTRICT_TOWNBE'],['Cobblestone County','DISTRICT_CBLCTY'],['Mineral District','DISTRICT_MINERL']]
+			[ocd_bedrock,ocd_cobblestone_county,ocd_mineraldistrict
 		end
 
 		desc "List precincts attached to a district"
@@ -363,13 +374,12 @@ class API < Grape::API
 		post :list_precincts do
 			# list precincts attached to district from jurisdiction
 
-			if params[:ocdid] == "DISTRICT_TOWNBE"
-				['Downtown-001','Quarrytown-002']
-			elsif params[:ocdid] == "DISTRICT_CBLCTY"
-				['Downtown-001','Quarrytown-002','QuarryCounty-003','County-004']
-				#params[:ocdid]
-			elsif params[:ocdid] == "DISTRICT_MINERL"
-				['Quarrytown-002','QuarryCounty-003']
+			if params[:ocdid] == ocd_bedrock
+				[ocd_Downtown001,ocd_Quarrytown002]
+			elsif params[:ocdid] == ocd_cobblestone_county
+				[ocd_Downtown001,ocd_Quarrytown002,ocd_QuarryCounty003,ocd_County004]
+			elsif params[:ocdid] == ocd_mineraldistrict
+				[ocd_Quarrytown002,ocd_QuarryCounty003]
 			else
 				error_not_found(params[:ocdid])
 			end
