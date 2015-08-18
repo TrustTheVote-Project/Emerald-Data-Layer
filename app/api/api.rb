@@ -14,7 +14,8 @@ class API < Grape::API
 
 	# OCDIDs for flintstones testing
 
-	ocd_cobblestone_county = "ocd-division/country:us/state:st/county:cobblestone"
+	ocd_state_slate = "ocd-division/country:us/state:slate/"
+	ocd_cobblestone_county = ocd_state_slate + "county:cobblestone/"
 	ocd_bedrock = ocd_cobblestone_county + "/town:bedrock"
 	ocd_mineraldistrict = ocd_cobblestone_county + "/mineral_d:1"
 	ocd_Downtown001 = ocd_cobblestone_county + "/precinct:Downtown-001"
@@ -29,21 +30,32 @@ class API < Grape::API
 	ocd_candidate_bettyrubble = "candidate:bettyrubble-2/" + ocd_contest_mayor
 	ocd_candidate_barneyrubble = "candidate:barneyrubble-3/" + ocd_quarry_comm
 	ocd_referendum_response_yes = "response:yes/question:A/ocd-division/country:us/state:st/county:cobblestone:mineral_d:1"
+	ocd_referendum_response_no = "response:no/question:A/ocd-division/country:us/state:st/county:cobblestone:mineral_d:1"
+	ocd_office_mayor = "office:mayor/" + ocd_bedrock
+	ocd_office_quarrycomm = "office:quarrycomm/" + ocd_cobblestone_county
+	ocd_party_granite = "party:granite/" + ocd_state_slate
+	ocd_party_marble = "party:marble/" + ocd_state_slate
 
-	data_bedrock = ['City of Bedrock',ocd_bedrock]
-	data_cobblecounty = ['Cobblestone County',ocd_cobblestone_county]
-	data_mineraldistrict = ['Mineral District',ocd_mineraldistrict]
-	data_candidate_fredflintstone = [['ballot_name','Fred Flintstone'],['ocdid',ocd_candidate_fredflintstone],['contest-id',ocd_contest_mayor]]
-	data_candidate_bettyrubble = [['ballot_name','Betty Rubble'],['ocdid',ocd_candidate_bettyrubble],['contest-id',ocd_contest_mayor]]
-	data_candidate_barneyrubble = [['ballot_name','Barney Rubble'],['ocdid',ocd_candidate_barneyrubble],['contest-id',ocd_quarry_comm]]
-	data_referendum = [['desc','Quarry Usage Fee'],['ocdid',ocd_referendum]]
-	data_referendum_response_yes = [['desc','Yes'],['ocdid',ocd_referendum_response_yes]]
-	data_contest_mayor = [['desc','Bedrock Mayor'],['ocdid',ocd_contest_mayor]]
-	data_quarry_comm = [['desc','Cobblestone County Commissioner'],['ocdid',ocd_quarry_comm]]
-	data_precinct_Downtown001 = [['ocdid',ocd_Downtown001]]
-	data_precinct_Quarrytown002 = [['ocdid',ocd_Quarrytown002]]
-	data_precinct_QuarryCounty003 = [['ocdid',ocd_QuarryCounty003]]
-	data_precinct_County004 = [['ocdid',ocd_County004]]
+
+	data_bedrock = {:name => "City of Bedrock", :ocdid => ocd_bedrock}
+	data_cobblecounty = {:name => "Cobblestone County", :ocdid => ocd_cobblestone_county}
+	data_mineraldistrict = {:name => "Mineral District", :ocdid => ocd_mineraldistrict}
+	data_candidate_fredflintstone = {:ballot_name => "Fred Flintstone", :ocdid => ocd_candidate_fredflintstone, :contest_id => ocd_contest_mayor, :party => ocd_party_granite}
+	data_candidate_bettyrubble = {:ballot_name => "Betty Rubble", :ocdid => ocd_candidate_bettyrubble, :contest_id => ocd_contest_mayor, :party => ocd_party_marble}
+	data_candidate_barneyrubble = {:ballot_name => "Barney Rubble", :ocdid => ocd_candidate_barneyrubble, :contest_id => ocd_contest_mayor, :party => ocd_party_marble}
+	data_referendum = {:desc => "Quarry Usage Fee", :ocdid => ocd_referendum}
+	data_referendum_response_yes = {:desc => "Yes", :ocdid => ocd_referendum_response_yes}
+	data_referendum_response_no = {:desc => "No", :ocdid => ocd_referendum_response_no}
+	data_contest_mayor = {:desc => "Bedrock Mayor", :ocdid => ocd_contest_mayor}
+	data_quarry_comm = {:desc => "Cobblestone County Commissioner", :ocdid => ocd_quarry_comm}
+	data_precinct_Downtown001 = {:ocdid => ocd_Downtown001}
+	data_precinct_Quarrytown002 = {:ocdid => ocd_Quarrytown002}
+	data_precinct_QuarryCounty003 = {:ocdid => ocd_QuarryCounty003}
+	data_precinct_County004 = {:ocdid => ocd_County004}
+	data_office_mayor = {:ocdid => ocd_office_mayor}
+	data_office_quarrycomm = {:ocdid => ocd_quarry_comm}
+	data_party_granite = {:ocdid => data_party_granite}
+	data_party_marble = {:ocdid => data_party_marble}
 
 	helpers do
 
@@ -364,7 +376,7 @@ class API < Grape::API
 			# list districts
 
 			# Flintstones test message
-			[ocd_bedrock,ocd_cobblestone_county,ocd_mineraldistrict
+			[ocd_bedrock,ocd_cobblestone_county,ocd_mineraldistrict]
 		end
 
 		desc "List precincts attached to a district"
@@ -648,7 +660,7 @@ class API < Grape::API
 			# list all defined parties
 
 			# dummy message for testing
-			['PARTY_1', 'PARTY_2', 'PARTY_3']
+			[ocd_party_marble, ocd_party_granite]
 		end
 
 		desc "Create a new party"
@@ -673,7 +685,13 @@ class API < Grape::API
 			# detail party
 
 			# dummy message for testing
-			"party"
+			if params[:ocdid] == ocd_party_marble
+				data_party_marble
+			elsif params[:ocdid] == ocd_party_granite
+				data_party_granite
+			else
+				error_not_found(params[:ocdid])
+			end
 		end
 
 		desc "Update a party"
@@ -762,7 +780,7 @@ class API < Grape::API
 			# list selections for a contest
 			if params[:election_id] == ocd_election
 				if params[:contest_ocdid] == ocd_referendum
-					[ocd_referendum_response_yes]
+					[ocd_referendum_response_yes,ocd_referendum_response_no]
 				else
 					error_invalid(params[:contest_ocdid])
 				end
@@ -795,7 +813,9 @@ class API < Grape::API
 			if params[:election_id] == ocd_election
 				if params[:contest_ocdid] == ocd_referendum
 					if params[:selection_ocdid] == ocd_referendum_response_yes
-						data_referendum_response
+						data_referendum_response_yes
+					elsif params[:selection_ocdid] == ocd_referendum_response_no
+						data_referendum_response_no
 					else
 						error_invalid(params[:selection_ocdid])
 					end
@@ -829,7 +849,7 @@ class API < Grape::API
 		post do
 			# return all contests
 			if params[:election_id] == ocd_election
-				[ocd_contest_mayor, ocd_quarry_comm,ocd_referendum]
+				[ocd_contest_mayor,ocd_quarry_comm,ocd_referendum]
 			else
 				error_invalid(params[:election_id])
 			end
@@ -897,7 +917,7 @@ class API < Grape::API
 			# list all ordered contests
 
 			# dummy message for testing
-			['CANDIDATE_1', 'CANDIDATE_2', 'CANDIDATE_3']
+			['CONTEST_1', 'CONTEST_2', 'CONTEST_3']
 		end
 
 
@@ -946,7 +966,7 @@ class API < Grape::API
 			# list all offices
 
 			# dummy message for testing
-			['OFFICE_1', 'OFFICE_2', 'OFFICE_3']
+			[ocd_office_mayor, ocd_office_quarrycomm]
 		end
 
 		desc "Create a new office"
@@ -968,9 +988,13 @@ class API < Grape::API
 		end
 		post :read do
 			# detail the office
-
-			# dummy message for testing
-			"office"
+			if params[:ocdid] == ocd_office_mayor
+				data_office_mayor
+			elsif params[:ocdid] == ocd_office_quarrycomm
+				data_office_quarrycomm
+			else
+				error_not_found(params[:ocdid])
+			end
 		end
 
 		desc "Update an office"
