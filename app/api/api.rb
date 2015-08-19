@@ -112,11 +112,41 @@ class API < Grape::API
 			end
 		end
 
-		# validate if OCDID is formatted properly
+		# validate if string is proper for a passage of text, such as
+		# a description of a ballot measure
+		# at this time only validates if it is printable
+		def validate_string_text(string)
+			if !string_printable(string)
+				error_invalid_input("text", string)
+			end
+		end
 
+		# validate if OCDID is formatted properly
 		def validate_ocdid(ocdid)
 			if !string_printable(ocdid) || !string_ocdid(ocdid)
 				error_invalid_input("ocdid",ocdid)
+			end
+		end
+
+		# validate if the ocdid is valid and exists
+		def validate_ocdid_exists(ocdid)
+			validate_ocdid(ocdid)
+			if !ocdid_exists(ocdid)
+				error_not_found(ocdid)
+			end
+		end
+
+		# validate that ocdid does not already exist
+		def validate_ocdid_duplicate(ocdid)
+			validate_ocdid(ocdid)
+			if ocdid_exists(ocdid)
+				error_already_exists(ocdid)
+			end
+		end
+
+		def validate_kml(kml)
+			if !kml.original_filename.include? ".kml"
+				error_invalid(kml.original_filename)
 			end
 		end
 
@@ -131,6 +161,12 @@ class API < Grape::API
 		def string_ocdid(ocdid)
 			str = ['!','"','#','$','%','(',')','*','+',',','.',';','<','=','>','?','@','[','\\',']','`','{','|','}','~']
 			!str.any? { |word| ocdid.include?(word) }
+		end
+
+		# eventually will determine if ocdid already exists
+		# both for use in checking if object has been created, and if it already has been created
+		def ocdid_exists(ocdid)
+			false
 		end
 	end
 
@@ -299,7 +335,7 @@ class API < Grape::API
 
 		desc "List districts attached to precinct"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 		end
 		post :list_districts do
 			# list districts attached to given precinct
@@ -320,10 +356,14 @@ class API < Grape::API
 
 		desc "Create precinct"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
+			requires :spatialextent, type: Rack::Multipart::UploadedFile, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
+			validate_kml(params[:spatialextent])
+			validate_name(params[:name])
 			# create precinct
 
 			# error if object already exists
@@ -400,9 +440,14 @@ class API < Grape::API
 		desc "Create district"
 		params do
 			requires :ocdid, type: String, allow_blank: false
+			requires :spatialextent, type: Rack::Multipart::UploadedFile, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
+			# district subtype?
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
+			validate_kml(params[:spatialextent])
+			validate_name(params[:name])
 			# create precinct and attach it to jurisdiction
 
 			# error if object already exists
@@ -473,11 +518,13 @@ class API < Grape::API
 			requires :date_month, type: Integer
 			requires :date_day, type: Integer
 			requires :date_year, type: Integer
-			requires :election_type, type: String
-			requires :name, type: String
+			requires :election_type, type: Integer
+			requires :name, type: String, allow_blank: false
+			requires :scope_id, type: String, allow_blank: false
 		end
 		post :create do
 			validate_string_name(params[:name])
+			validate_ocdid_exists(params[:scope_id])
 			# create a new election
 
 			# dummy message for testing
@@ -523,16 +570,19 @@ class API < Grape::API
 
 		desc "Create candidate contest"
 		params do
-			requires :name, type: String
-			requires :election_id, type: String, allow_blank: false
-			requires :votes_allowed, type: Integer
-
-			# vssc allows for more than one scope ID, but requires at least 1
-			# not sure if this is the right way to do this
-			requires :jurisdiction_scope_id, type: Array
+			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
+			requires :election_id, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
+			requires :ballot_title, type: String, allow_blank: false
+			requires :ballot_subtitle, type: String, allow_blank: false
+			requires :vote_variation_type, type: Integer # integer as position in enum in schema
 		end
 		post :create do
 			validate_string_name(params[:name])
+			validate_string_name(params[:ballot_title])
+			validate_string_name(params[:ballot_subtitle])
+			# validate vote variation type
+
 			# create the candidate contest
 
 			# dummy message for testing
@@ -603,12 +653,31 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :election_id, type: String, allow_blank: false
-			requires :ballot_name, type: String
+			requires :ballot_name, type: String, allow_blank: false
+			requires :party_id, type: String, allow_blank: false, desc: "ocdid of affiliated party."
+
+			# 'person' subclass here
+			requires :first_name, type: String, allow_blank: false
+			requires :middle_name, type: String
+			requires :last_name, type: String, allow_blank: false
+			requires :prefix, type: String
+			requires :suffix, type: String
+			requires :profession, type: String, allow_blank: false
+
 		end
 		post :create do
-			validate_ocdid(params[:ocdid])
+			validate_ocdid_duplicate(params[:ocdid])
 			validate_string_name(params[:ballot_name])
-			# validate for duplicate
+			validate_string_name(params[:first_name])
+			validate_string_name(params[:middle_name])
+			validate_string_name(params[:last_name])
+			validate_string_name(params[:prefix])
+			validate_string_name(params[:suffix])
+			validate_string_name(params[:profession])
+
+			# validate that election, party IDs exist
+			validate_ocdid_exists(params[:election_id])
+			validate_ocdid_exists(params[:party_id])
 
 			# create candidate
 
@@ -666,11 +735,14 @@ class API < Grape::API
 		desc "Create a new party"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :name, type: String
+			requires :name, type: String, allow_blank: false
+			requires :color, type: Integer, desc: "HTML color of party."
+			requires :abbreviation, type: String, allow_blank: false
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
+			validate_string_name(params[:abbreviation])
 			# create party
 
 			# dummy message for testing
@@ -723,16 +795,32 @@ class API < Grape::API
 
 		desc "Create ballot measure contest"
 		params do
-			requires :name, type: String
-			requires :election_id, type: String, allow_blank: false
-			requires :ballot_measure_type, type: String
+			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
+			requires :election_id, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
+			requires :ballot_title, type: String, allow_blank: false
+			requires :ballot_subtitle, type: String, allow_blank: false
+			requires :ballot_measure_type, type: Integer # integer as position in enum in schema
 
-			# vssc allows for more than one scope ID, but requires at least 1
-			# not sure if this is the right way to do this
-			requires :jurisdiction_scope_id, type: Array
+			requires :pro_statement, type: String, allow_blank: false
+			requires :con_statement, type: String, allow_blank: false
+			requires :passage_threshold, type: String, allow_blank: false
+			requires :full_text, type: String, allow_blank: false
+			requires :summary_text, type: String, allow_blank: false
+			requires :effect_of_abstain, type: String, allow_blank: false
 		end
 		post :create do
 			validate_string_name(params[:name])
+			validate_string_name(params[:abbreviation])
+			validate_string_name(params[:ballot_title])
+			validate_string_name(params[:ballot_subtitle])
+
+			validate_string_text(params[:pro_statement])
+			validate_string_text(params[:con_statement])
+			validate_string_text(params[:passage_threshold]) # best way to validate?a
+			validate_string_text(params[:full_text])
+			validate_string_text(params[:summary_text])
+			validate_string_text(params[:effect_of_abstain])
 			# create the ballot measure contest
 
 			# dummy message for testing
@@ -793,10 +881,12 @@ class API < Grape::API
 		params do
 			requires :election_id, type: String, allow_blank: false
 			requires :contest_ocdid, type: String, allow_blank: false
+			requires :ocdid, type: String, allow_blank: false
 			requires :selection, type: String
 		end
 		post :create do
 			# create a ballot measure selection
+			validate_ocdid_duplicate(params[:ocdid])
 
 			# dummy message for testing
 			"creating selection " + params[:selection] + " in contest " + params[:ocdid]
@@ -875,7 +965,7 @@ class API < Grape::API
 			requires :gpunit_id, type: String, allow_blank: false
 		end
 		post :create do
-			validate_ocdid(params[:ocdid])
+			validate_ocdid_duplicate(params[:ocdid])
 			# create a new ballot style
 
 			# dummy message for testing
@@ -929,6 +1019,10 @@ class API < Grape::API
 			requires :contest_id, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid_duplicate(params[:ocdid])
+			validate_ocdid_exists(params[:election_id])
+			validate_ocdid_exists(params[:ballot_style_id])
+			validate_ocdid_exists(params[:contest_id])
 			# create an ordered contest
 
 			# dummy message for testing
@@ -972,10 +1066,11 @@ class API < Grape::API
 		desc "Create a new office"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :name, type: String
+			requires :name, type: String, allow_blank: false
 		end
 		post :create do
 			validate_string_name(params[:name])
+			validate_ocdid_duplicate(params[:ocdid])
 			# create a new office
 
 			# dummy message for testing
