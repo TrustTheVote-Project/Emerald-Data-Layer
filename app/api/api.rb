@@ -946,8 +946,8 @@ class API < Grape::API
 		end
 	end
 
-	resource :ballot_style do
-		desc "List all ballot styles of an election"
+	resource :ballot_specs do
+		desc "List all ballot specs of an election"
 		params do
 			requires :election_id, type: String, allow_blank: false
 		end
@@ -955,10 +955,10 @@ class API < Grape::API
 			# return all ballot styles of that election
 
 			# dummy message for testing
-			['STYLE_1', 'STYLE_2', 'STYLE_3']
+			['SPEC_1', 'SPEC_2', 'SPEC_3']
 		end
 
-		desc "Create a new ballot style"
+		desc "Create a new ballot spec"
 		params do
 			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
@@ -966,91 +966,34 @@ class API < Grape::API
 		end
 		post :create do
 			validate_ocdid_duplicate(params[:ocdid])
-			# create a new ballot style
+			# create a new ballot spec
 
 			# dummy message for testing
-			"creating new ballot style"
+			"creating new ballot spec"
 		end
 
-		desc "Detail a ballot style"
+		desc "Detail a ballot spec"
 		params do
 			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
-			# detail the selected ballot style
+			# detail the selected ballot spec
 
 			# dummy message for testing
-			"ballot style"
+			"ballot spec"
 		end
 
-		desc "Update a ballot style"
+		desc "Update a ballot spec"
 		params do
 			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :update do
-			# update the selected ballot style
+			# update the selected ballot spec
 
 			# dummy message for testing
 			"updating"
-		end
-	end
-
-	resource :ordered_contest do
-		desc "List all ordered contests"
-		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ballot_style_id, type: String, allow_blank: false
-		end
-		post do
-			# list all ordered contests
-
-			# dummy message for testing
-			['CONTEST_1', 'CONTEST_2', 'CONTEST_3']
-		end
-
-
-		desc "Create an ordered contest"
-		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ballot_style_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-			requires :contest_id, type: String, allow_blank: false
-		end
-		post :create do
-			validate_ocdid_duplicate(params[:ocdid])
-			validate_ocdid_exists(params[:election_id])
-			validate_ocdid_exists(params[:ballot_style_id])
-			validate_ocdid_exists(params[:contest_id])
-			# create an ordered contest
-
-			# dummy message for testing
-			"creating ordered contest"
-		end
-		desc "Detail an ordered contest"
-		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ballot_style_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-		end
-		post :read do
-			# detail the ordered contest
-
-			# dummy message for testing
-			"ordered contest"
-		end
-		desc "Update an ordered contest"
-		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ballot_style_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-		end
-		post :update do
-			# update the selected contest
-
-			# dummy message for testing
-			"updating ordered contest"
 		end
 	end
 
@@ -1095,6 +1038,7 @@ class API < Grape::API
 		desc "Update an office"
 		params do
 			requires :ocdid, type: String, allow_blank: false
+			requires :name, type: String, allow_blank: false
 		end
 		post :update do
 			# update the office
