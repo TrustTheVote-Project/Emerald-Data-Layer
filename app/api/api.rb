@@ -189,6 +189,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :list_districts do
+			validate_ocdid(params[:ocdid])
 			# list districts attached to given jurisdiction
 
 			# Flintstones test message
@@ -204,6 +205,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :list_subunits do
+			validate_ocdid(params[:ocdid])
 			# list all subunits
 
 			# Flintstones test message
@@ -251,6 +253,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:ocdid])
 			# return all data from selected jurisdiction
 
 			# error if object does not exist
@@ -265,8 +268,13 @@ class API < Grape::API
 		desc "Update selected jurisdiction"
 		params do
 			requires :ocdid, type: String, allow_blank: false
+			requires :name, type: String
+			requires :elorg_name, type: String
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_string_name(params[:name])
+			validate_string_name(params[:elorg_name])
 			# update given parameters in selected jurisdiction
 
 			# error if object does not exist
@@ -285,6 +293,8 @@ class API < Grape::API
 			requires :child_ocdid, type: String, allow_blank: false
 		end
 		post :attach do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:child_ocdid])
 			# attach to the given jurisdiction
 
 			# error if object does not exist
@@ -304,9 +314,11 @@ class API < Grape::API
 		desc "Detach a child element from a jurisdiction."
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :child_id, type: String, allow_blank: false
+			requires :child_ocdid, type: String, allow_blank: false
 		end
 		post :detach do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:child_ocdid])
 
 			# error if object does not exist
 			if params[:ocdid] != ocd_cobblestone_county
@@ -338,6 +350,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 		end
 		post :list_districts do
+			validate_ocdid(params[:ocdid])
 			# list districts attached to given precinct
 
 			# Flintstones test message
@@ -378,6 +391,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:ocdid])
 			# display selected precinct info
 			case params[:ocdid]
 			when ocd_Downtown001
@@ -397,8 +411,13 @@ class API < Grape::API
 		desc "Update selected precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false
+			requires :spatialextent, type: Rack::Multipart::UploadedFile, desc: "Spatial definition file, kml format."
+			requires :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_kml(params[:spatialextent])
+			validate_name(params[:name])
 			# update selected precinct
 
 			# error if object does not exist
@@ -406,6 +425,16 @@ class API < Grape::API
 
 			# dummy message for testing
 			"updated"
+		end
+
+		desc "Get spatial extent."
+		params do
+			requires :ocdid, type: String, allow_blank: false
+		end
+		post :spatialextent do
+			validate_ocdid(params[:ocdid])
+
+			"kml data"
 		end
 	end
 
@@ -424,6 +453,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :list_precincts do
+			validate_ocdid(params[:ocdid])
 			# list precincts attached to district from jurisdiction
 
 			if params[:ocdid] == ocd_bedrock
@@ -462,6 +492,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:ocdid])
 			# display info on the district
 
 			# dummy message for testing
@@ -472,8 +503,13 @@ class API < Grape::API
 		params do
 			# not sure if jurisdiction ID is needed
 			requires :ocdid, type: String, allow_blank: false
+			requires :spatialextent, type: Rack::Multipart::UploadedFile, desc: "Spatial definition file, kml format."
+			requires :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_kml(params[:spatialextent])
+			validate_name(params[:name])
 			# update info for the district
 
 			# dummy message for testing
@@ -483,13 +519,39 @@ class API < Grape::API
 		desc "Attach a precinct to a district"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :precinct_id, type: String, allow_blank: false
+			requires :precinct_ocdid, type: String, allow_blank: false
 		end
 		post :attach_precinct do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:precinct_ocdid])
 			# attach precinct to district
 
 			# dummy message for testing
-			"attaching precinct " + params[:precinct_id] + " to district " + params[:ocdid]
+			"attaching precinct " + params[:precinct_ocdid] + " to district " + params[:ocdid]
+		end
+
+		desc "Detach a precinct from a district"
+		params do
+			requires :ocdid, type: String, allow_blank: false
+			requires :precinct_ocdid, type: String, allow_blank: false
+		end
+		post :detach_precinct do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:precinct_ocdid])
+			# Detach precinct from district
+
+			# dummy message for testing
+			"detaching precinct " + params[:precinct_ocdid] + " from district " + params[:ocdid]
+		end
+
+		desc "Get spatial extent."
+		params do
+			requires :ocdid, type: String, allow_blank: false
+		end
+		post :spatialextent do
+			validate_ocdid(params[:ocdid])
+
+			"kml data"
 		end
 	end
 
@@ -504,13 +566,14 @@ class API < Grape::API
 
 		desc "List all elections under a certain scope"
 		params do
-			requires :jurisdiction_id, type: String, allow_blank: false
+			requires :jurisdiction_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:jurisdiction_ocdid])
 			# list elections under given jurisdiction
 
 			# dummy message for testing
-			"elections under " + params[:jurisdiction_id]
+			"elections under " + params[:jurisdiction_ocdid]
 		end
 
 		desc "Create new election"
@@ -527,6 +590,8 @@ class API < Grape::API
 			validate_ocdid_exists(params[:scope_id])
 			# create a new election
 
+			# validate whether election type enum integer is within range
+
 			# dummy message for testing
 			"creating election"
 		end
@@ -536,6 +601,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:ocdid])
 			# detail selected election
 
 			# dummy message for testing
@@ -545,8 +611,15 @@ class API < Grape::API
 		desc "Update one election"
 		params do
 			requires :ocdid, type: String, allow_blank: false
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_type, type: Integer
+			requires :name, type: String, allow_blank: false
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_string_name(params[:name])
 			# update selected election
 
 			# dummy message for testing
@@ -557,27 +630,30 @@ class API < Grape::API
 	resource :candidate_contest do
 		desc "List all candidate contests under an election"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_ocdid])
 			# list all candidate contests
-			if params[:election_id] == ocd_election
+			if params[:election_ocdid] == ocd_election
 				[ocd_contest_mayor,ocd_quarry_comm]
 			else
-				error_invalid(params[:election_id])
+				error_invalid(params[:election_ocdid])
 			end
 		end
 
 		desc "Create candidate contest"
 		params do
 			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
-			requires :election_id, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :election_ocdid, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
 			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
-			requires :vote_variation_type, type: Integer # integer as position in enum in schema
+			requires :vote_variation_type, type: Integer, desc: "Integer as position in enum in schema"
 		end
 		post :create do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid_exists(params[:election_ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:ballot_title])
 			validate_string_name(params[:ballot_subtitle])
@@ -591,11 +667,13 @@ class API < Grape::API
 
 		desc "List detail of a candidate contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
-			if params[:election_id] == ocd_election
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:election_ocdid])
+			if params[:election_ocdid] == ocd_election
 				if params[:ocdid] == ocd_contest_mayor
 					data_contest_mayor
 				elsif params[:ocdid] == ocd_quarry_comm
@@ -604,16 +682,25 @@ class API < Grape::API
 					error_invalid(params[:ocdid])
 				end
 			else
-				error_invalid(params[:election_id])
+				error_invalid(params[:election_ocdid])
 			end
 		end
 
 		desc "Update candidate contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
+			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
+			requires :ballot_title, type: String
+			requires :ballot_subtitle, type: String
+			requires :vote_variation_type, type: Integer, desc: "Integer as position in enum in schema"
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:election_ocdid])
+			validate_string_name(params[:name])
+			validate_string_name(params[:ballot_title])
+			validate_string_name(params[:ballot_subtitle])
 			# update the selected contest
 
 			# dummy message for testing
@@ -622,26 +709,46 @@ class API < Grape::API
 
 		desc "Attach an office to contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
-			requires :office_id, type: String, allow_blank: false
+			requires :office_ocdid, type: String, allow_blank: false
 		end
 		post :attach_office do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:office_ocdid])
 			# attach the office
 
 			# dummy message for testing
 			"adding office to contest"
+		end
+
+		desc "Detach an office from contest"
+		params do
+			requires :election_ocdid, type: String, allow_blank: false
+			requires :ocdid, type: String, allow_blank: false
+			requires :office_ocdid, type: String, allow_blank: false
+		end
+		post :detach_office do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:office_ocdid])
+			# detach the office
+
+			# dummy message for testing
+			"removing office from contest"
 		end
 	end
 
 	resource :candidate do
 		desc "List all candidates in an election"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_ocdid])
 			# list all candidates
-			if params[:election_id] == ocd_election
+			if params[:election_ocdid] == ocd_election
 				[ocd_candidate_fredflintstone, ocd_candidate_bettyrubble, ocd_candidate_barneyrubble]
 			else
 				# dummy message for testing
@@ -652,9 +759,9 @@ class API < Grape::API
 		desc "Create a candidate"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ballot_name, type: String, allow_blank: false
-			requires :party_id, type: String, allow_blank: false, desc: "ocdid of affiliated party."
+			requires :party_ocdid, type: String, allow_blank: false, desc: "ocdid of affiliated party."
 
 			# 'person' subclass here
 			requires :first_name, type: String, allow_blank: false
@@ -666,6 +773,7 @@ class API < Grape::API
 
 		end
 		post :create do
+			validate_ocdid(params[:ocdid])
 			validate_ocdid_duplicate(params[:ocdid])
 			validate_string_name(params[:ballot_name])
 			validate_string_name(params[:first_name])
@@ -676,8 +784,8 @@ class API < Grape::API
 			validate_string_name(params[:profession])
 
 			# validate that election, party IDs exist
-			validate_ocdid_exists(params[:election_id])
-			validate_ocdid_exists(params[:party_id])
+			validate_ocdid_exists(params[:election_ocdid])
+			validate_ocdid_exists(params[:party_ocdid])
 
 			# create candidate
 
@@ -687,12 +795,14 @@ class API < Grape::API
 
 		desc "Detail a candidate"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
 			# detail the candidate
-			if params[:election_id] == ocd_election
+			if params[:election_ocdid] == ocd_election
 				case params[:ocdid]
 				when ocd_candidate_fredflintstone
 					data_candidate_fredflintstone
@@ -712,10 +822,36 @@ class API < Grape::API
 
 		desc "Update a candidate"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
+
+
+			requires :ballot_name, type: String, allow_blank: false
+			requires :party_ocdid, type: String, allow_blank: false, desc: "ocdid of affiliated party."
+
+			# 'person' subclass here
+			requires :first_name, type: String
+			requires :middle_name, type: String
+			requires :last_name, type: String
+			requires :prefix, type: String
+			requires :suffix, type: String
+			requires :profession, type: String
 		end
 		post :update do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
+			validate_string_name(params[:ballot_name])
+			validate_string_name(params[:first_name])
+			validate_string_name(params[:middle_name])
+			validate_string_name(params[:last_name])
+			validate_string_name(params[:prefix])
+			validate_string_name(params[:suffix])
+			validate_string_name(params[:profession])
+
+			# validate that election, party IDs exist
+			validate_ocdid_exists(params[:election_ocdid])
+			validate_ocdid_exists(params[:party_ocdid])
+
 			# update the candidate
 
 			# dummy message for testing
@@ -754,6 +890,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:ocdid])
 			# detail party
 
 			# dummy message for testing
@@ -769,8 +906,14 @@ class API < Grape::API
 		desc "Update a party"
 		params do
 			requires :ocdid, type: String, allow_blank: false
+			requires :name, type: String
+			requires :color, type: Integer, desc: "HTML color of party."
+			requires :abbreviation, type: String
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_string_name(params[:name])
+			validate_string_name(params[:abbreviation])
 			# update party
 
 			# dummy message for testing
@@ -781,11 +924,12 @@ class API < Grape::API
 	resource :ballot_measure_contest do
 		desc "List all ballot measure contests"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_ocdid])
 			# list all ballot measure contests
-			if params[:election_id] == ocd_election
+			if params[:election_ocdid] == ocd_election
 				[ocd_referendum]
 			else
 				# dummy message for testing
@@ -796,7 +940,7 @@ class API < Grape::API
 		desc "Create ballot measure contest"
 		params do
 			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
-			requires :election_id, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :election_ocdid, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
 			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
@@ -810,6 +954,7 @@ class API < Grape::API
 			requires :effect_of_abstain, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid(params[:election_ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
 			validate_string_name(params[:ballot_title])
@@ -817,7 +962,7 @@ class API < Grape::API
 
 			validate_string_text(params[:pro_statement])
 			validate_string_text(params[:con_statement])
-			validate_string_text(params[:passage_threshold]) # best way to validate?a
+			validate_string_text(params[:passage_threshold]) # best way to validate?
 			validate_string_text(params[:full_text])
 			validate_string_text(params[:summary_text])
 			validate_string_text(params[:effect_of_abstain])
@@ -829,28 +974,55 @@ class API < Grape::API
 
 		desc "List detail of a ballot measure contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
 			# detail the selected contest
-			if params[:election_id] = ocd_election
+			if params[:election_ocdid] = ocd_election
 				if params[:ocdid] == ocd_referendum
 					data_referendum
 				else
 					error_invalid(params[:ocdid])
 				end
 			else
-				error_invalid(params[:election_id])
+				error_invalid(params[:election_ocdid])
 			end
 		end
 
 		desc "Update ballot measure contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
+
+			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
+			requires :ballot_title, type: String
+			requires :ballot_subtitle, type: String
+			requires :ballot_measure_type, type: Integer # integer as position in enum in schema
+
+			requires :pro_statement, type: String
+			requires :con_statement, type: String
+			requires :passage_threshold, type: String
+			requires :full_text, type: String
+			requires :summary_text, type: String
+			requires :effect_of_abstain, type: String
 		end
 		post :update do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
+			validate_string_name(params[:name])
+			validate_string_name(params[:abbreviation])
+			validate_string_name(params[:ballot_title])
+			validate_string_name(params[:ballot_subtitle])
+
+			validate_string_text(params[:pro_statement])
+			validate_string_text(params[:con_statement])
+			validate_string_text(params[:passage_threshold]) # best way to validate?
+			validate_string_text(params[:full_text])
+			validate_string_text(params[:summary_text])
+			validate_string_text(params[:effect_of_abstain])
 			# update the selected contest
 
 			# dummy message for testing
@@ -861,30 +1033,35 @@ class API < Grape::API
 	resource :ballot_measure_selection do
 		desc "List all ballot measure selections for a contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :contest_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:contest_ocdid])
 			# list selections for a contest
-			if params[:election_id] == ocd_election
+			if params[:election_ocdid] == ocd_election
 				if params[:contest_ocdid] == ocd_referendum
 					[ocd_referendum_response_yes,ocd_referendum_response_no]
 				else
 					error_invalid(params[:contest_ocdid])
 				end
 			else
-				error_invalid(params[:election_id])
+				error_invalid(params[:election_ocdid])
 			end
 		end
 
 		desc "Create a ballot measure selection"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :contest_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 			requires :selection, type: String
 		end
 		post :create do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:contest_ocdid])
+			validate_ocdid(params[:ocdid])
 			# create a ballot measure selection
 			validate_ocdid_duplicate(params[:ocdid])
 
@@ -896,9 +1073,12 @@ class API < Grape::API
 		params do
 			requires :election_id, type: String, allow_blank: false
 			requires :contest_ocdid, type: String, allow_blank: false
-			requires :selection_ocdid, type: String, allow_blank: false
+			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:contest_ocdid])
+			validate_ocdid(params[:ocdid])
 			# detail the selected selection
 			if params[:election_id] == ocd_election
 				if params[:contest_ocdid] == ocd_referendum
@@ -921,9 +1101,13 @@ class API < Grape::API
 		params do
 			requires :election_id, type: String, allow_blank: false
 			requires :contest_ocdid, type: String, allow_blank: false
-			requires :selection_ocdid, type: String, allow_blank: false
+			requires :ocdid, type: String, allow_blank: false
+			requires :selection, type: String
 		end
 		post :update do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:contest_ocdid])
+			validate_ocdid(params[:ocdid])
 			# update the selected selection
 
 			# dummy message for testing
@@ -934,14 +1118,15 @@ class API < Grape::API
 	resource :contest do
 		desc "List all contests under a certain election, both candidate and ballot measure"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_ocdid])
 			# return all contests
-			if params[:election_id] == ocd_election
+			if params[:election_ocdid] == ocd_election
 				[ocd_contest_mayor,ocd_quarry_comm,ocd_referendum]
 			else
-				error_invalid(params[:election_id])
+				error_invalid(params[:election_ocdid])
 			end
 		end
 	end
@@ -949,9 +1134,10 @@ class API < Grape::API
 	resource :ballot_specs do
 		desc "List all ballot specs of an election"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_ocdid])
 			# return all ballot styles of that election
 
 			# dummy message for testing
@@ -960,11 +1146,14 @@ class API < Grape::API
 
 		desc "Create a new ballot spec"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
-			requires :gpunit_id, type: String, allow_blank: false
+			requires :gpunit_ocdid, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:gpunit_ocdid])
 			validate_ocdid_duplicate(params[:ocdid])
 			# create a new ballot spec
 
@@ -974,10 +1163,12 @@ class API < Grape::API
 
 		desc "Detail a ballot spec"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
 			# detail the selected ballot spec
 
 			# dummy message for testing
@@ -986,10 +1177,12 @@ class API < Grape::API
 
 		desc "Update a ballot spec"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :election_ocdid, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :update do
+			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:ocdid])
 			# update the selected ballot spec
 
 			# dummy message for testing
@@ -1012,6 +1205,7 @@ class API < Grape::API
 			requires :name, type: String, allow_blank: false
 		end
 		post :create do
+			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
 			validate_ocdid_duplicate(params[:ocdid])
 			# create a new office
@@ -1025,6 +1219,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
+			validate_ocdid(params[:ocdid])
 			# detail the office
 			if params[:ocdid] == ocd_office_mayor
 				data_office_mayor
@@ -1038,9 +1233,11 @@ class API < Grape::API
 		desc "Update an office"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :name, type: String, allow_blank: false
+			requires :name, type: String
 		end
 		post :update do
+			validate_ocdid(params[:ocdid])
+			validate_string_name(params[:name])
 			# update the office
 
 			# dummy message for testing
