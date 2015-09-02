@@ -145,8 +145,8 @@ class API < Grape::API
 		end
 
 		def validate_kml(kml)
-			if !kml.original_filename.include? ".kml"
-				error_invalid(kml.original_filename)
+			if !kml[:filename].include? ".kml"
+				error_invalid(kml[:filename])
 			end
 		end
 
@@ -370,7 +370,7 @@ class API < Grape::API
 		desc "Create precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
-			requires :spatialextent, type: Rack::Multipart::UploadedFile, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
 			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 		end
 		post :create do
@@ -411,7 +411,7 @@ class API < Grape::API
 		desc "Update selected precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :spatialextent, type: Rack::Multipart::UploadedFile, desc: "Spatial definition file, kml format."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
 			requires :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
@@ -470,7 +470,7 @@ class API < Grape::API
 		desc "Create district"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :spatialextent, type: Rack::Multipart::UploadedFile, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
 			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 			# district subtype?
 		end
@@ -503,7 +503,7 @@ class API < Grape::API
 		params do
 			# not sure if jurisdiction ID is needed
 			requires :ocdid, type: String, allow_blank: false
-			requires :spatialextent, type: Rack::Multipart::UploadedFile, desc: "Spatial definition file, kml format."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
 			requires :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
@@ -650,6 +650,7 @@ class API < Grape::API
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
 			requires :vote_variation_type, type: Integer, desc: "Integer as position in enum in schema"
+			requires :sequence_order, type: Integer
 		end
 		post :create do
 			validate_ocdid(params[:election_ocdid])
@@ -694,6 +695,7 @@ class API < Grape::API
 			requires :ballot_title, type: String
 			requires :ballot_subtitle, type: String
 			requires :vote_variation_type, type: Integer, desc: "Integer as position in enum in schema"
+			requires :sequence_order, type: Integer
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
