@@ -95,6 +95,16 @@ class API < Grape::API
 			error!(type + ' is invalid: ' + value, 400)
 		end
 
+		# error if ocdid given is not the correct type of object
+		def error_wrong_type(type, value)
+			error!(value + ' is not a : ' + type, 400)
+		end
+
+		# error if enum position integer is out of the range of possible options
+		def error_enum_range(type, value)
+			error!(value + ' is out of the range of ' + type, 400)
+		end
+
 		# error for if object ID exists, but is not the right type of object for what is expected?
 
 		# error for empty list of items in database?
@@ -126,6 +136,12 @@ class API < Grape::API
 			if !string_printable(ocdid) || !string_ocdid(ocdid)
 				error_invalid_input("ocdid",ocdid)
 			end
+		end
+
+		# placeholder for validation if OCDID is correct type
+		# not quite sure how it should be called and checked at this point
+		def validate_ocdid_type(ocdid, type)
+			true
 		end
 
 		# validate if the ocdid is valid and exists
@@ -650,7 +666,7 @@ class API < Grape::API
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
 			requires :vote_variation_type, type: Integer, desc: "Integer as position in enum in schema"
-			requires :sequence_order, type: Integer
+			requires :sequence_order, type: Integer, allow_blank: false
 		end
 		post :create do
 			validate_ocdid(params[:election_ocdid])
@@ -947,6 +963,7 @@ class API < Grape::API
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
 			requires :ballot_measure_type, type: Integer # integer as position in enum in schema
+			requires :sequence_order, type: Integer, allow_blank: false
 
 			requires :pro_statement, type: String, allow_blank: false
 			requires :con_statement, type: String, allow_blank: false
@@ -1003,6 +1020,7 @@ class API < Grape::API
 			requires :ballot_title, type: String
 			requires :ballot_subtitle, type: String
 			requires :ballot_measure_type, type: Integer # integer as position in enum in schema
+			requires :sequence_order, type: Integer
 
 			requires :pro_statement, type: String
 			requires :con_statement, type: String
@@ -1138,7 +1156,7 @@ class API < Grape::API
 		params do
 			requires :election_ocdid, type: String, allow_blank: false
 		end
-		post do
+		post :list do
 			validate_ocdid(params[:election_ocdid])
 			# return all ballot styles of that election
 
@@ -1146,49 +1164,18 @@ class API < Grape::API
 			['SPEC_1', 'SPEC_2', 'SPEC_3']
 		end
 
-		desc "Create a new ballot spec"
+		desc "List ballot specs of an election in a precinct"
 		params do
 			requires :election_ocdid, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-			requires :gpunit_ocdid, type: String, allow_blank: false
+			requires :precinct_ocdid, type: String, allow_blank: false
 		end
-		post :create do
+		post :precinct_list do
 			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
-			validate_ocdid(params[:gpunit_ocdid])
-			validate_ocdid_duplicate(params[:ocdid])
 			# create a new ballot spec
 
 			# dummy message for testing
-			"creating new ballot spec"
-		end
-
-		desc "Detail a ballot spec"
-		params do
-			requires :election_ocdid, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-		end
-		post :read do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid(params[:ocdid])
-			# detail the selected ballot spec
-
-			# dummy message for testing
-			"ballot spec"
-		end
-
-		desc "Update a ballot spec"
-		params do
-			requires :election_ocdid, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-		end
-		post :update do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid(params[:ocdid])
-			# update the selected ballot spec
-
-			# dummy message for testing
-			"updating"
+			['SPEC_1', 'SPEC_2', 'SPEC_3']
 		end
 	end
 
@@ -1205,11 +1192,40 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String, allow_blank: false
+			requires :scope_ocdid, type: String, allow_blank: false, desc: "OCDID of office's jurisdictional scope"
+			requires :holder_ocdid, type: String, allow_blank: false, desc: "OCDID of current office holder"
+			requires :deadline_month, type: Integer, desc: "Filing deadling month"
+			requires :deadline_day, type: Integer, desc: "Filing deadline day"
+			requires :deadline_year, type: Integer, desc: "Filing deadline year"
+			requires :ispartisan, type: boolean
+
+			# Contact info portion
+			requires :address_line, type: String, allow_blank: false
+			requires :email, type: String, allow_blank: false
+			requires :fax, type: String, allow_blank: false
+			requires :contact_name, type: String, allow_blank: false
+			requires :phone, type: String, allow_blank: false
+			requires :uri, type: String, allow_blank: false
+			# schedule here somehow
+
+			# Term portion
+			requires :term_start_month, type: Integer, allow_blank: false
+			requires :term_start_day, type: Integer, allow_blank: false
+			requires :term_start_year, type: Integer, allow_blank: false
+			requires :term_end_month, type: Integer, allow_blank: false
+			requires :term_end_day, type: Integer, allow_blank: false
+			requires :term_end_year, type: Integer, allow_blank: false
+			requires :term_type, type: Integer, allow_blank: false, desc: "Enum position based on enum in standard"
+
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:scope_ocdid])
+			validate_ocdid(params[:holder_ocdid])
 			validate_string_name(params[:name])
+			validate_string_name(params[:contact_name])
 			validate_ocdid_duplicate(params[:ocdid])
+			# verify phone numbers?
 			# create a new office
 
 			# dummy message for testing
@@ -1236,10 +1252,37 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
+			# guessing unable to update scope OCDID
+			requires :holder_ocdid, type: String, allow_blank: false, desc: "OCDID of current office holder"
+			requires :deadline_month, type: Integer, desc: "Filing deadling month"
+			requires :deadline_day, type: Integer, desc: "Filing deadline day"
+			requires :deadline_year, type: Integer, desc: "Filing deadline year"
+			requires :ispartisan, type: boolean
+
+			# Contact info portion
+			requires :address_line, type: String
+			requires :email, type: String
+			requires :fax, type: String
+			requires :contact_name, type: String
+			requires :phone, type: String
+			requires :uri, type: String
+			# schedule here somehow
+
+			# Term portion
+			requires :term_start_month, type: Integer
+			requires :term_start_day, type: Integer
+			requires :term_start_year, type: Integer
+			requires :term_end_month, type: Integer
+			requires :term_end_day, type: Integer
+			requires :term_end_year, type: Integer
+			requires :term_type, type: Integer, desc: "Enum position based on enum in standard"
+
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:holder_ocdid])
 			validate_string_name(params[:name])
+			validate_string_name(params[:contact_name])
 			# update the office
 
 			# dummy message for testing
