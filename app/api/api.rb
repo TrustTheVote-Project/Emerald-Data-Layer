@@ -14,14 +14,14 @@ class API < Grape::API
 
 	# OCDIDs for flintstones testing
 
-	ocd_state_slate = "ocd-division/country:us/state:slate/"
-	ocd_cobblestone_county = ocd_state_slate + "county:cobblestone/"
+	ocd_state_slate = "ocd-division/country:us/state:slate"
+	ocd_cobblestone_county = ocd_state_slate + "/county:cobblestone"
 	ocd_bedrock = ocd_cobblestone_county + "/town:bedrock"
 	ocd_mineraldistrict = ocd_cobblestone_county + "/mineral_d:1"
 	ocd_Downtown001 = ocd_cobblestone_county + "/precinct:Downtown-001"
 	ocd_Quarrytown002 = ocd_cobblestone_county + "/precinct:Quarrytown-002"
-	ocd_QuarryCounty003 = ocd_cobblestone_county + "precinct:QuarryCounty-003"
-	ocd_County004 = ocd_cobblestone_county + "precinct:County-004"
+	ocd_QuarryCounty003 = ocd_cobblestone_county + "/precinct:QuarryCounty-003"
+	ocd_County004 = ocd_cobblestone_county + "/precinct:County-004"
 	ocd_election = "election:11-03-5000BC/" + ocd_cobblestone_county
 	ocd_contest_mayor = "contest:mayor/" + ocd_cobblestone_county
 	ocd_quarry_comm = "contest:quarry-commisioner/" + ocd_mineraldistrict
@@ -38,7 +38,7 @@ class API < Grape::API
 
 
 	data_bedrock = {:name => "City of Bedrock", :ocdid => ocd_bedrock}
-	data_cobblecounty = {:name => "Cobblestone County", :ocdid => ocd_cobblestone_county}
+	data_cobblecounty = {:name => "Cobblestone County", :ocdid => ocd_cobblestone_county, :elorg_name => "Cobblestone County"}
 	data_mineraldistrict = {:name => "Mineral District", :ocdid => ocd_mineraldistrict}
 	data_candidate_fredflintstone = {:ballot_name => "Fred Flintstone", :ocdid => ocd_candidate_fredflintstone, :contest_id => ocd_contest_mayor, :party => ocd_party_granite}
 	data_candidate_bettyrubble = {:ballot_name => "Betty Rubble", :ocdid => ocd_candidate_bettyrubble, :contest_id => ocd_contest_mayor, :party => ocd_party_marble}
@@ -48,7 +48,7 @@ class API < Grape::API
 	data_referendum_response_no = {:desc => "No", :ocdid => ocd_referendum_response_no}
 	data_contest_mayor = {:desc => "Bedrock Mayor", :ocdid => ocd_contest_mayor}
 	data_quarry_comm = {:desc => "Cobblestone County Commissioner", :ocdid => ocd_quarry_comm}
-	data_precinct_Downtown001 = {:ocdid => ocd_Downtown001}
+	data_precinct_Downtown001 = {:ocdid => ocd_Downtown001, :name => "Downtown001"}
 	data_precinct_Quarrytown002 = {:ocdid => ocd_Quarrytown002}
 	data_precinct_QuarryCounty003 = {:ocdid => ocd_QuarryCounty003}
 	data_precinct_County004 = {:ocdid => ocd_County004}
@@ -197,7 +197,7 @@ class API < Grape::API
 			# error for empty list of items in database?
 
 			# Flintstones test message
-			data_cobblecounty
+			[ocd_cobblestone_county]
 		end
 
 		desc "List districts under a jurisdiction"
@@ -208,6 +208,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# list districts attached to given jurisdiction
 
+			status 200
 			# Flintstones test message
 			if params[:ocdid] == ocd_cobblestone_county
 				[data_bedrock,data_cobblecounty,data_mineraldistrict]
@@ -224,6 +225,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# list all subunits
 
+			status 200
 			# Flintstones test message
 			if params[:ocdid] == ocd_bedrock
 				[ocd_Downtown001,ocd_Quarrytown002]
@@ -275,10 +277,13 @@ class API < Grape::API
 			# error if object does not exist
 			if params[:ocdid] != ocd_cobblestone_county
 				error_not_found(params[:ocdid])
+			else
+				status 200
+				data_cobblecounty
 			end
 
 			# dummy message for testing
-			"jurisdiction data"
+			#"jurisdiction data"
 		end
 
 		desc "Update selected jurisdiction"
@@ -296,10 +301,12 @@ class API < Grape::API
 			# error if object does not exist
 			if params[:ocdid] != ocd_cobblestone_county
 				error_not_found(params[:ocdid])
+			else
+				status 200
 			end
 
 			# dummy message for testing
-			"updating"
+			#"updating"
 		end
 
 		desc "Attach child to jurisdiction. This can be attaching a jurisdiction to another, such as
@@ -324,6 +331,7 @@ class API < Grape::API
 			end
 
 			# dummy message for testing
+			status 200
 			"attaching"
 		end
 
@@ -346,6 +354,7 @@ class API < Grape::API
 				# detach the current child
 
 				# dummy message for testing
+				status 200
 				"detaching"
 			end
 		end
@@ -359,6 +368,7 @@ class API < Grape::API
 
 			# Flintstones test message
 			[ocd_Downtown001, ocd_Quarrytown002, ocd_QuarryCounty003, ocd_County004]
+			#[ocd_Downtown001]
 		end
 
 		desc "List districts attached to precinct"
@@ -370,6 +380,7 @@ class API < Grape::API
 			# list districts attached to given precinct
 
 			# Flintstones test message
+			status 200
 			if params[:ocdid] == ocd_Downtown001
 				[ocd_bedrock,ocd_cobblestone_county]
 			elsif params[:ocdid] == ocd_Quarrytown002
@@ -392,7 +403,7 @@ class API < Grape::API
 		post :create do
 			validate_ocdid(params[:ocdid])
 			validate_kml(params[:spatialextent])
-			validate_name(params[:name])
+			validate_string_name(params[:name])
 			# create precinct
 
 			# error if object already exists
@@ -409,6 +420,7 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:ocdid])
 			# display selected precinct info
+			status 200
 			case params[:ocdid]
 			when ocd_Downtown001
 				data_precinct_Downtown001
@@ -427,19 +439,22 @@ class API < Grape::API
 		desc "Update selected precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			#requires :spatialextent, allow_blank: true, desc: "Spatial definition file, kml format."
 			requires :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
-			validate_kml(params[:spatialextent])
-			validate_name(params[:name])
+			if params[:spatialextent] != "" && params[:spatialextent] 
+				validate_kml(params[:spatialextent])
+			end
+			#validate_name(params[:name])
 			# update selected precinct
 
 			# error if object does not exist
 			#error_not_found(params[:ocdid])
 
 			# dummy message for testing
+			status 200
 			"updated"
 		end
 
@@ -450,6 +465,7 @@ class API < Grape::API
 		post :spatialextent do
 			validate_ocdid(params[:ocdid])
 
+			status 200
 			"kml data"
 		end
 	end
@@ -472,6 +488,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# list precincts attached to district from jurisdiction
 
+			status 200
 			if params[:ocdid] == ocd_bedrock
 				[ocd_Downtown001,ocd_Quarrytown002]
 			elsif params[:ocdid] == ocd_cobblestone_county
@@ -511,6 +528,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# display info on the district
 
+			status 200
 			# dummy message for testing
 			"district info"
 		end
@@ -528,6 +546,7 @@ class API < Grape::API
 			validate_name(params[:name])
 			# update info for the district
 
+			status 200
 			# dummy message for testing
 			"updating district"
 		end
@@ -542,6 +561,7 @@ class API < Grape::API
 			validate_ocdid(params[:precinct_ocdid])
 			# attach precinct to district
 
+			status 200
 			# dummy message for testing
 			"attaching precinct " + params[:precinct_ocdid] + " to district " + params[:ocdid]
 		end
@@ -556,6 +576,7 @@ class API < Grape::API
 			validate_ocdid(params[:precinct_ocdid])
 			# Detach precinct from district
 
+			status 200
 			# dummy message for testing
 			"detaching precinct " + params[:precinct_ocdid] + " from district " + params[:ocdid]
 		end
@@ -567,6 +588,7 @@ class API < Grape::API
 		post :spatialextent do
 			validate_ocdid(params[:ocdid])
 
+			status 200
 			"kml data"
 		end
 	end
@@ -587,6 +609,7 @@ class API < Grape::API
 		post do
 			validate_ocdid(params[:jurisdiction_ocdid])
 			# list elections under given jurisdiction
+			status 200
 
 			# dummy message for testing
 			"elections under " + params[:jurisdiction_ocdid]
@@ -619,6 +642,7 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:ocdid])
 			# detail selected election
+			status 200
 
 			# dummy message for testing
 			"election"
@@ -637,6 +661,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
 			# update selected election
+			status 200
 
 			# dummy message for testing
 			"updating"
@@ -650,6 +675,7 @@ class API < Grape::API
 		end
 		post do
 			validate_ocdid(params[:election_ocdid])
+			status 200
 			# list all candidate contests
 			if params[:election_ocdid] == ocd_election
 				[ocd_contest_mayor,ocd_quarry_comm]
@@ -690,6 +716,7 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:election_ocdid])
+			status 200
 			if params[:election_ocdid] == ocd_election
 				if params[:ocdid] == ocd_contest_mayor
 					data_contest_mayor
@@ -720,6 +747,7 @@ class API < Grape::API
 			validate_string_name(params[:ballot_title])
 			validate_string_name(params[:ballot_subtitle])
 			# update the selected contest
+			status 200
 
 			# dummy message for testing
 			"updating candidate contest"
@@ -736,6 +764,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:office_ocdid])
 			# attach the office
+			status 200
 
 			# dummy message for testing
 			"adding office to contest"
@@ -752,6 +781,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:office_ocdid])
 			# detach the office
+			status 200
 
 			# dummy message for testing
 			"removing office from contest"
@@ -766,6 +796,7 @@ class API < Grape::API
 		post do
 			validate_ocdid(params[:election_ocdid])
 			# list all candidates
+			status 200
 			if params[:election_ocdid] == ocd_election
 				[ocd_candidate_fredflintstone, ocd_candidate_bettyrubble, ocd_candidate_barneyrubble]
 			else
@@ -819,6 +850,7 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
+			status 200
 			# detail the candidate
 			if params[:election_ocdid] == ocd_election
 				case params[:ocdid]
@@ -872,6 +904,7 @@ class API < Grape::API
 
 			# update the candidate
 
+			status 200
 			# dummy message for testing
 			"updating candidate"
 		end
@@ -911,6 +944,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# detail party
 
+			status 200
 			# dummy message for testing
 			if params[:ocdid] == ocd_party_marble
 				data_party_marble
@@ -934,6 +968,7 @@ class API < Grape::API
 			validate_string_name(params[:abbreviation])
 			# update party
 
+			status 200
 			# dummy message for testing
 			"updating party"
 		end
@@ -947,6 +982,7 @@ class API < Grape::API
 		post do
 			validate_ocdid(params[:election_ocdid])
 			# list all ballot measure contests
+			status 200
 			if params[:election_ocdid] == ocd_election
 				[ocd_referendum]
 			else
@@ -999,6 +1035,7 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
+			status 200
 			# detail the selected contest
 			if params[:election_ocdid] = ocd_election
 				if params[:ocdid] == ocd_referendum
@@ -1045,6 +1082,7 @@ class API < Grape::API
 			validate_string_text(params[:effect_of_abstain])
 			# update the selected contest
 
+			status 200
 			# dummy message for testing
 			"updating ballot measure contest"
 		end
@@ -1059,6 +1097,7 @@ class API < Grape::API
 		post do
 			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:contest_ocdid])
+			status 200
 			# list selections for a contest
 			if params[:election_ocdid] == ocd_election
 				if params[:contest_ocdid] == ocd_referendum
@@ -1099,6 +1138,7 @@ class API < Grape::API
 			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:contest_ocdid])
 			validate_ocdid(params[:ocdid])
+			status 200
 			# detail the selected selection
 			if params[:election_id] == ocd_election
 				if params[:contest_ocdid] == ocd_referendum
@@ -1130,6 +1170,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# update the selected selection
 
+			status 200
 			# dummy message for testing
 			"updating"
 		end
@@ -1142,6 +1183,7 @@ class API < Grape::API
 		end
 		post do
 			validate_ocdid(params[:election_ocdid])
+			status 200
 			# return all contests
 			if params[:election_ocdid] == ocd_election
 				[ocd_contest_mayor,ocd_quarry_comm,ocd_referendum]
@@ -1160,6 +1202,7 @@ class API < Grape::API
 			validate_ocdid(params[:election_ocdid])
 			# return all ballot styles of that election
 
+			status 200
 			# dummy message for testing
 			['SPEC_1', 'SPEC_2', 'SPEC_3']
 		end
@@ -1174,6 +1217,7 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# create a new ballot spec
 
+			status 200
 			# dummy message for testing
 			['SPEC_1', 'SPEC_2', 'SPEC_3']
 		end
@@ -1197,7 +1241,7 @@ class API < Grape::API
 			requires :deadline_month, type: Integer, desc: "Filing deadling month"
 			requires :deadline_day, type: Integer, desc: "Filing deadline day"
 			requires :deadline_year, type: Integer, desc: "Filing deadline year"
-			requires :ispartisan, type: boolean
+			requires :ispartisan, type: Boolean
 
 			# Contact info portion
 			requires :address_line, type: String, allow_blank: false
@@ -1238,6 +1282,7 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
+			status 200
 			# detail the office
 			if params[:ocdid] == ocd_office_mayor
 				data_office_mayor
@@ -1257,7 +1302,7 @@ class API < Grape::API
 			requires :deadline_month, type: Integer, desc: "Filing deadling month"
 			requires :deadline_day, type: Integer, desc: "Filing deadline day"
 			requires :deadline_year, type: Integer, desc: "Filing deadline year"
-			requires :ispartisan, type: boolean
+			requires :ispartisan, type: Boolean
 
 			# Contact info portion
 			requires :address_line, type: String
@@ -1285,6 +1330,7 @@ class API < Grape::API
 			validate_string_name(params[:contact_name])
 			# update the office
 
+			status 200
 			# dummy message for testing
 			"updating the office"
 		end
