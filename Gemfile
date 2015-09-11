@@ -25,7 +25,10 @@ gem 'sdoc', '~> 0.4.0', group: :doc
 
 gem 'grape'
 
-gem 'vssc-ruby'
+#gem 'vssc-ruby'
+
+gem 'VEDaStore', git: 'https://github.com/TrustTheVote-Project/VEDaStore'
+
 
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'

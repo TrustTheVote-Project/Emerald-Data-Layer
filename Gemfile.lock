@@ -1,3 +1,11 @@
+GIT
+  remote: https://github.com/TrustTheVote-Project/VEDaStore
+  revision: 31c5b7cb11899ef49053f44c32645f4f1e4003bb
+  specs:
+    VEDaStore (0.0.1)
+      nokogiri (~> 1.6.0)
+      rails (~> 4.2.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -162,10 +170,6 @@ GEM
       coercible (~> 1.0)
       descendants_tracker (~> 0.0, >= 0.0.3)
       equalizer (~> 0.0, >= 0.0.9)
-    vssc-ruby (0.0.2)
-      activemodel (~> 4)
-      activesupport (~> 4)
-      nokogiri (~> 1.6)
     web-console (2.2.1)
       activemodel (>= 4.0)
       binding_of_caller (>= 0.7.2)
@@ -176,6 +180,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  VEDaStore!
   byebug
   coffee-rails (~> 4.1.0)
   grape
@@ -188,8 +193,4 @@ DEPENDENCIES
   sqlite3
   turbolinks
   uglifier (>= 1.3.0)
-  vssc-ruby
   web-console (~> 2.0)
-
-BUNDLED WITH
-   1.10.5
