@@ -361,13 +361,21 @@ class API < Grape::API
 	end
 
 	# Precinct methods
-	resource :precinct do
+	resources :precincts do
 		desc "List all precincts"
 		get do
 			# list precints
 
 			# Flintstones test message
-			[ocd_Downtown001, ocd_Quarrytown002, ocd_QuarryCounty003, ocd_County004]
+			
+      return Vssc::ReportingUnit.limit(10).collect do |p|
+        {
+          id: p.id,
+          ocdid: p.object_id
+        }
+      end
+      
+      #[ocd_Downtown001, ocd_Quarrytown002, ocd_QuarryCounty003, ocd_County004]
 			#[ocd_Downtown001]
 		end
 
@@ -395,11 +403,11 @@ class API < Grape::API
 		end
 
 		desc "Create precinct"
-		params do
-			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
-			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
-			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
-		end
+    params do
+      requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
+      requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+      requires :name, type: String, allow_blank: false, desc: "Name of precinct."
+    end
 		post :create do
 			validate_ocdid(params[:ocdid])
 			validate_kml(params[:spatialextent])
@@ -407,10 +415,21 @@ class API < Grape::API
 			# create precinct
 
 			# error if object already exists
-			#error_already_exists(params[:ocdid])
-
-			# dummy message for testing
-			"creating precinct"
+			
+      if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
+  			error_already_exists(params[:ocdid])
+      end
+      
+      p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name])
+			
+      if p.save
+        status 200
+        return p
+      else
+        status 500
+        return p.errors
+      end
+      
 		end
 
 		desc "Display full info on selected precinct"
@@ -420,19 +439,23 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:ocdid])
 			# display selected precinct info
-			status 200
-			case params[:ocdid]
-			when ocd_Downtown001
-				data_precinct_Downtown001
-			when ocd_Quarrytown002
-				data_precinct_Quarrytown002
-			when ocd_QuarryCounty003
-				data_precinct_QuarryCounty003
-			when ocd_County004
-				data_precinct_County004
+      # case params[:ocdid]
+      # when ocd_Downtown001
+      #   data_precinct_Downtown001
+      # when ocd_Quarrytown002
+      #   data_precinct_Quarrytown002
+      # when ocd_QuarryCounty003
+      #   data_precinct_QuarryCounty003
+      # when ocd_County004
+      #   data_precinct_County004
+      p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+      if p
+        status 200
+        return p
 			else
 				# error if object does not exist
-				error_not_found(params[:ocdid])
+				status 404
+        error_not_found(params[:ocdid])
 			end
 		end
 
@@ -440,22 +463,35 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			#requires :spatialextent, allow_blank: true, desc: "Spatial definition file, kml format."
-			requires :name, type: String, desc: "Name of precinct."
+			optional :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
 			if params[:spatialextent] != "" && params[:spatialextent] 
 				validate_kml(params[:spatialextent])
 			end
-			#validate_name(params[:name])
-			# update selected precinct
+			
+      #validate_name(params[:name])
+			
+      # error if object does not exist
+      attributes = params.dup
+			p = Vssc::ReportingUnit.find_by_object_id(attributes.delete(:ocdid))
+      if p.nil?
+        status 400
+        error_not_found(params[:ocdid])
+      else
+        # update selected precinct
+        # TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+        p.name = attributes[:name]
+        if p.save
+  			  status 200
+          return p
+        else
+          status 500
+          return p.errors
+        end
+      end
 
-			# error if object does not exist
-			#error_not_found(params[:ocdid])
-
-			# dummy message for testing
-			status 200
-			"updated"
 		end
 
 		desc "Get spatial extent."

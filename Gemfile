@@ -27,7 +27,7 @@ gem 'grape'
 
 #gem 'vssc-ruby'
 
-gem 'VEDaStore', git: 'https://github.com/TrustTheVote-Project/VEDaStore'
+gem 'VEDaStore', git: 'https://github.com/TrustTheVote-Project/VEDaStore', require: 'vssc_rails'
 
 
 # Use ActiveModel has_secure_password
