@@ -401,6 +401,24 @@ class API < Grape::API
 				error_not_found(params[:ocdid])
 			end
 		end
+    
+    desc "List composing units of a precinct"
+		params do
+			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
+		end
+		post :list_composing_precincts do
+			validate_ocdid(params[:ocdid])
+      p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+      if p
+        status 200
+        return p.composing_gp_units
+			else
+				# error if object does not exist
+				status 404
+        error_not_found(params[:ocdid])
+			end
+		end
+    
 
 		desc "Create precinct"
     params do
@@ -493,6 +511,39 @@ class API < Grape::API
       end
 
 		end
+
+		desc "Attach a precinct to a precinct"
+		params do
+			requires :ocdid, type: String, allow_blank: false
+			requires :composing_ocdid, type: String, allow_blank: false
+		end
+		post :attach_precinct do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:composing_ocdid])
+			
+      p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+      if p.nil?
+        status 400
+        return error_not_found(params[:ocdid])
+      end
+      
+      composing_p = Vssc::ReportingUnit.find_by_object_id(params[:composing_ocdid])
+      if composing_p.nil?
+        status 400
+        error_not_found(params[:composing_ocdid])
+      end
+      
+			# attach precinct to precinct
+      p.composing_gp_units << composing_p
+      if p.save
+        status 200
+        return p.to_json(include: :composing_gp_units)
+      else
+        status500
+        return p.errors
+      end
+		end
+
 
 		desc "Get spatial extent."
 		params do
