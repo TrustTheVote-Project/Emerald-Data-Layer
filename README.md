@@ -2,6 +2,7 @@
 
 Make sure your database is set up and the app is running
 
+    bundle install
     rake db:migrate
     rails s
 
