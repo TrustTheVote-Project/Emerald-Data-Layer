@@ -200,16 +200,21 @@ class API < Grape::API
 
 
 	# Jurisdiction methods
-	resource :jurisdiction do
+	resource :jurisdictions do
 
 		desc "List jurisdictions"
 		get do
-			# return list of name, ID of each jurisdiction
+			# return list of all jurisdictions
+			j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
+			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
+			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
 
-			# error for empty list of items in database?
-
-			# Flintstones test message
-			[ocd_cobblestone_county]
+			j.collect do |p|
+				{
+					id: p.id,
+					ocdid: p.object_id
+				}
+			end
 		end
 
 		desc "List districts under a jurisdiction"
@@ -218,13 +223,22 @@ class API < Grape::API
 		end
 		post :list_districts do
 			validate_ocdid(params[:ocdid])
-			# list districts attached to given jurisdiction
+			j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
+			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
+			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
 
-			status 200
-			# Flintstones test message
-			if params[:ocdid] == ocd_cobblestone_county
-				[data_bedrock,data_cobblecounty,data_mineraldistrict]
+      		u = j.find_by_object_id(params[:ocdid])
+			if u
+				status 200
+				return u.composing_gp_units.where(is_electoral_district: true).collect do |p|
+					{
+						id: p.id,
+						ocdid: p.object_id
+					}
+				end
 			else
+				# error if object does not exist
+				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -235,17 +249,26 @@ class API < Grape::API
 		end
 		post :list_subunits do
 			validate_ocdid(params[:ocdid])
-			# list all subunits
 
-			status 200
-			# Flintstones test message
-			if params[:ocdid] == ocd_bedrock
-				[ocd_Downtown001,ocd_Quarrytown002]
-			elsif params[:ocdid] == ocd_cobblestone_county
-				[ocd_Downtown001,ocd_Quarrytown002,ocd_QuarryCounty003,ocd_County004]
-			elsif params[:ocdid] == ocd_mineraldistrict
-				[ocd_Quarrytown002,ocd_QuarryCounty003]
+			#j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
+			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
+			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
+
+      		#u = j.find_by_object_id(params[:ocdid])
+
+      		u = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+
+			if u
+				status 200
+				return u.composing_gp_units.collect do |p|
+					{
+						id: p.id,
+						ocdid: p.object_id
+					}
+				end
 			else
+				# error if object does not exist
+				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -254,18 +277,26 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
-			requires :elorg_name, type: String
+			#requires :elorg_name, type: String
+			requires :unit_type, type: Integer, desc: "Enum index of reporting unit type"
 		end
 		post :create do
 			validate_string_name(params[:name])
-			validate_string_name(params[:elorg_name])
+			#validate_string_name(params[:elorg_name])
 			validate_ocdid(params[:ocdid])
-			if params[:ocdid] == ocd_cobblestone_county
-			# error if object already exists
+			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
 				error_already_exists(params[:ocdid])
+			end
+
+			j = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], 
+				reporting_unit_type: get_enum_by_index(Vssc::Enum::ReportingUnitType, params[:unit_type], "jurisdiction"))
+			
+			if j.save
+				status 200
+				return j
 			else
-				# create jurisdiction
-				# params allowed are those defined in VSSC for ReportingUnit
+				status 500
+				return j.errors
 			end
 		end
 
@@ -284,41 +315,50 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-			# return all data from selected jurisdiction
 
-			# error if object does not exist
-			if params[:ocdid] != ocd_cobblestone_county
-				error_not_found(params[:ocdid])
-			else
+			#j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
+			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
+			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
+
+      		p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+			if p
 				status 200
-				data_cobblecounty
+				return p
+			else
+				# error if object does not exist
+				status 404
+				error_not_found(params[:ocdid])
 			end
-
-			# dummy message for testing
-			#"jurisdiction data"
 		end
 
 		desc "Update selected jurisdiction"
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
-			requires :elorg_name, type: String
+			#requires :elorg_name, type: String
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
-			validate_string_name(params[:elorg_name])
-			# update given parameters in selected jurisdiction
+			#validate_string_name(params[:elorg_name])
 
-			# error if object does not exist
-			if params[:ocdid] != ocd_cobblestone_county
+			attributes = params.dup
+			j = Vssc::ReportingUnit.find_by_object_id(attributes.delete(:ocdid))
+			if j.nil?
+				status 400
 				error_not_found(params[:ocdid])
 			else
-				status 200
+				# update selected jurisdiction
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				j.name = attributes[:name]
+				if j.save
+					status 200
+					return j
+				else
+					status 500
+					return j.errors
+				end
 			end
-
-			# dummy message for testing
-			#"updating"
 		end
 
 		desc "Attach child to jurisdiction. This can be attaching a jurisdiction to another, such as
@@ -330,21 +370,32 @@ class API < Grape::API
 		post :attach do
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:child_ocdid])
-			# attach to the given jurisdiction
 
-			# error if object does not exist
-			if params[:ocdid] != ocd_cobblestone_county
-				error_not_found(params[:ocdid])
+			p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:ocdid])
 			end
 
-			# error if child object does not exist
-			if params[:child_ocdid] != ocd_bedrock && params[:child_ocdid] != ocd_cobblestone_county && params[:child_ocdid] != ocd_mineraldistrict 
+			c = Vssc::ReportingUnit.find_by_object_id(params[:child_ocdid])
+			if c.nil?
+				status 400
 				error_not_found(params[:child_ocdid])
 			end
 
-			# dummy message for testing
-			status 200
-			"attaching"
+			if p.composing_gp_units.where(object_id: params[:child_ocdid]).count > 0
+				error_already_attached(params[:ocdid], params[:child_ocdid])
+			end
+
+			# attach precinct to precinct
+			p.composing_gp_units << c
+			if p.save
+				status 200
+				return p.to_json(include: :composing_gp_units)
+			else
+				status 500
+				return p.errors
+			end
 		end
 
 		desc "Detach a child element from a jurisdiction."
@@ -385,28 +436,36 @@ class API < Grape::API
 			end
 		end
 
-		# Is it possible to get parent GPUnits?
-		desc "List districts attached to precinct"
+		desc "List districts with selected precinct as a child"
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 		end
 		post :list_districts do
 			validate_ocdid(params[:ocdid])
-			# list districts attached to given precinct
 
-			# Flintstones test message
-			status 200
-			if params[:ocdid] == ocd_Downtown001
-				[ocd_bedrock,ocd_cobblestone_county]
-			elsif params[:ocdid] == ocd_Quarrytown002
-				[ocd_bedrock,ocd_cobblestone_county,ocd_mineraldistrict]
-			elsif params[:ocdid] == ocd_QuarryCounty003
-				[ocd_cobblestone_county,ocd_mineraldistrict]
-			elsif params[:ocdid] == ocd_County004
-				[ocd_cobblestone_county]
-			else
-				error_not_found(params[:ocdid])
+			# Find all districts
+			d = Vssc::ReportingUnit.where(is_electoral_district: true)
+
+			# Create dummy reportingunit to store each correct district in
+			b = Vssc::ReportingUnit.new()
+
+			# For each district, if its composing gpunits includes the precinct, add it to dummy
+			d.collect do |a|
+				a.composing_gp_units.collect do |c|
+					if c.object_id == params[:ocdid]
+						b.composing_gp_units << a
+					end
+				end
 			end
+
+			# return list of all found districts
+			return b.composing_gp_units.collect do |r|
+				{
+					id: r.id,
+					ocdid: r.object_id
+				}
+			end
+
 		end
     
 	    desc "List composing units of a precinct"
@@ -492,7 +551,7 @@ class API < Grape::API
 			
 			# error if object does not exist
 			attributes = params.dup
-			p = Vssc::ReportingUnit.find_by_object_id(attributes.delete(:ocdid))
+			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(attributes.delete(:ocdid))
 			if p.nil?
 				status 400
 				error_not_found(params[:ocdid])
@@ -594,7 +653,6 @@ class API < Grape::API
 				status 404
 				error_not_found(params[:ocdid])
 			end
-
 		end
 
 		desc "Create district"
@@ -754,8 +812,6 @@ class API < Grape::API
 					name: e.name
 				}
 			end
-			#Vssc::Enum::ElectionType.class
-			#get_enum_by_index(Vssc::Enum::ElectionType, 35, "electiontype")
 		end
 
 		desc "List all elections under a certain scope"
@@ -765,10 +821,18 @@ class API < Grape::API
 		post do
 			validate_ocdid(params[:jurisdiction_ocdid])
 			# list elections under given jurisdiction
+			j = Vssc::GpUnit.find_by_object_id(params[:jurisdiction_ocdid])
+			if j.nil?
+				status 400
+				return error_not_found(params[:jurisdiction_ocdid])
+			end
 			status 200
-
-			# dummy message for testing
-			"elections under " + params[:jurisdiction_ocdid]
+			return Vssc::Election.where(election_scope_identifier: params[:jurisdiction_ocdid]).collect do |e|
+				{
+					id: e.id,
+					name: e.name
+				}
+			end
 		end
 
 		desc "Create new election"
@@ -793,7 +857,7 @@ class API < Grape::API
 
 			# Language for internationalized name?
 			name = Vssc::InternationalizedText.new()
-			name.language_strings << Vssc::LanguageString.new(language: "English", text: params[:name])
+			name.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
 
 			# Asks for countstatus for some reason?
 			e = Vssc::Election.new(election_scope_identifier: params[:scope_ocdid], name: name, 
@@ -815,7 +879,7 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-      		e = Vssc::Election.find_by_object_id(params[:id])
+			e = Vssc::Election.find_by_object_id(params[:id])
 			if e
 				status 200
 				return e
@@ -984,27 +1048,33 @@ class API < Grape::API
 		end
 	end
 
-	resource :candidate do
+	resource :candidates do
 		desc "List all candidates in an election"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
-			validate_ocdid(params[:election_ocdid])
-			# list all candidates
-			status 200
-			if params[:election_ocdid] == ocd_election
-				[ocd_candidate_fredflintstone, ocd_candidate_bettyrubble, ocd_candidate_barneyrubble]
+			# list all candidates in selected object
+			e = Vssc::Election.where(id: params[:election_id]).first
+			if e
+				status 200
+				return e.candidates.collect do |c|
+					{
+						object_id: c.object_id,
+						name: c.ballot_name.language_strings.where(language: "en-US").first.text
+					}
+				end
 			else
-				# dummy message for testing
-				['CANDIDATE_1', 'CANDIDATE_2', 'CANDIDATE_3']
+				# error if object does not exist
+				status 404
+				error_not_found(params[:id])
 			end
 		end
 
 		desc "Create a candidate"
 		params do
 			requires :ocdid, type: String, allow_blank: false
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ballot_name, type: String, allow_blank: false
 			requires :party_ocdid, type: String, allow_blank: false, desc: "ocdid of affiliated party."
 
@@ -1019,7 +1089,6 @@ class API < Grape::API
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
-			validate_ocdid_duplicate(params[:ocdid])
 			validate_string_name(params[:ballot_name])
 			validate_string_name(params[:first_name])
 			validate_string_name(params[:middle_name])
@@ -1028,52 +1097,86 @@ class API < Grape::API
 			validate_string_name(params[:suffix])
 			validate_string_name(params[:profession])
 
+
+			# error if object already exists			
+			if Vssc::Candidate.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
 			# validate that election, party IDs exist
-			validate_ocdid_exists(params[:election_ocdid])
-			validate_ocdid_exists(params[:party_ocdid])
+			p = Vssc::Party.find_by_object_id(params[:party_ocdid])
+			if p.nil?
+				status 400
+				error_not_found(params[:party_ocdid])
+			end
 
-			# create candidate
+			ballotname = Vssc::InternationalizedText.new()
+			ballotname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
 
-			# dummy message for testing
-			"creating candidate " + params[:ballot_name]
+			profession = Vssc::InternationalizedText.new()
+			profession.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:profession])
+
+			p = Vssc::Person.new(object_id: params[:ocdid], first_name: params[:first_name], middle_names: [params[:middle_name]], 
+				last_name: params[:last_name], prefix: params[:prefix], sufix: params[:suffix], profession: profession, full_name: ballotname)
+
+			if p.save
+				c = Vssc::Candidate.new(object_id: params[:ocdid], ballot_name: ballotname, person_identifier: p.id, party_identifier: params[:party_ocdid])
+				if c.save
+					status 200
+					return [c,p]
+				else
+					status 500
+					return c.errors
+				end
+			else
+				status 500
+				return p.errors
+			end
 		end
 
 		desc "Detail a candidate"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
-			status 200
-			# detail the candidate
-			if params[:election_ocdid] == ocd_election
-				case params[:ocdid]
-				when ocd_candidate_fredflintstone
-					data_candidate_fredflintstone
-				when ocd_candidate_bettyrubble
-					data_candidate_bettyrubble
-				when ocd_candidate_barneyrubble
-					data_candidate_barneyrubble
-				else
-					error_invalid(params[:ocdid])
-				end	
-			else
-				"candidate"
-			end
+			
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
 
-			# dummy message for testing
+			# confirm OCDID exists and is a candidate
+			#c = e.candidates.find_by_object_id(params[:ocdid])
+
+			# temporary until elections work
+			c = Vssc::Candidate.find_by_object_id(params[:ocdid])
+
+			if c
+				p = Vssc::Person.where(id: c.person_identifier).first
+				if p
+					status 200
+					return [c,p]
+				else
+					status 400
+					error_not_found(params[:ocdid])
+				end
+			else
+				status 400
+				error_not_found(params[:ocdid])
+			end
 		end
 
 		desc "Update a candidate"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 
 
-			requires :ballot_name, type: String, allow_blank: false
-			requires :party_ocdid, type: String, allow_blank: false, desc: "ocdid of affiliated party."
+			requires :ballot_name, type: String
+			requires :party_ocdid, type: String, desc: "ocdid of affiliated party."
 
 			# 'person' subclass here
 			requires :first_name, type: String
@@ -1084,7 +1187,6 @@ class API < Grape::API
 			requires :profession, type: String
 		end
 		post :update do
-			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:ballot_name])
 			validate_string_name(params[:first_name])
@@ -1095,14 +1197,68 @@ class API < Grape::API
 			validate_string_name(params[:profession])
 
 			# validate that election, party IDs exist
-			validate_ocdid_exists(params[:election_ocdid])
-			validate_ocdid_exists(params[:party_ocdid])
+			# error if object does not exist
+			#attributes = params.dup
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
 
-			# update the candidate
+			# confirm OCDID exists and is a candidate
+			#c = e.candidates.find_by_object_id(params[:ocdid])
 
-			status 200
-			# dummy message for testing
-			"updating candidate"
+			# temporary until elections work
+			c = Vssc::Candidate.find_by_object_id(params[:ocdid])
+
+			if c.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			end
+
+			p = Vssc::Person.where(id: c.person_identifier).first
+
+			if p.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			else
+				# update selected candidate/person
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				if params[:ballot_name].length > 0
+					c.ballot_name.language_strings.where(language: "en-US").first.text = params[:ballot_name]
+					p.full_name.language_strings.where(language: "en-US").first.text = params[:ballot_name]
+				end
+				if params[:first_name].length > 0
+					p.first_name = params[:first_name]
+				end
+				if params[:middle_name].length > 0
+					p.middle_names = [params[:middle_name]]
+				end
+				if params[:last_name].length > 0
+					p.last_name = params[:last_name]
+				end
+				if params[:prefix].length > 0
+					p.prefix = params[:prefix]
+				end
+				if params[:suffix].length > 0
+					p.sufix = params[:suffix]
+				end
+				if params[:profession].length > 0
+					p.profession = params[:profession]
+				end
+				if c.save
+					if p.save
+						status 200
+						return [c,p]
+					else
+						status 500
+						return p.errors
+					end
+				else
+					status 500
+					return c.errors
+				end
+			end
 		end
 	end
 
@@ -1135,13 +1291,13 @@ class API < Grape::API
 			end
 
 			name = Vssc::InternationalizedText.new()
-			name.language_strings << Vssc::LanguageString.new(language: "English", text: params[:name])
+			name.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
 
 			p = Vssc::Party.new(object_id: params[:ocdid], name: name, color: params[:color], abbreviation: params[:abbreviation])
 
 			if p.save
 				status 200
-				return p(include: :language_strings)
+				return p.to_json(:include => {:name => { :include => :language_strings}})
 			else
 				status 500
 				return p.errors
