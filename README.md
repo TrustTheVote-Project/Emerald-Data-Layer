@@ -4,7 +4,7 @@ Make sure your database is set up and the app is running
 
     bundle install
     rake db:migrate
-    rails s
+    
 
 Create Precint 101
 
@@ -56,3 +56,30 @@ Show all precincts (4)
 
     curl 'http://localhost:3000/api/v1/precincts'
   
+
+
+Districts: 
+
+Create Travis County TX Congressional District 35
+
+    curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35", "spatialextent": {"filename": "myfile.kml"}, "name": "District 35, Congressional"}' 'http://localhost:3000/api/v1/districts/create' -H Content-Type:application/json
+
+Edit Travis Congressional District 35
+
+    curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "Congressional District 35"}' 'http://localhost:3000/api/v1/districts/update' -H Content-Type:application/json
+
+List all electoral districts
+
+    curl 'http://localhost:3000/api/v1/districts'
+
+Show details for Travis County TX Congressional District 35
+
+    curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/districts/read' -H Content-Type:application/json
+
+Attach precinct 101 to Congressional District 35
+
+    curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35", "precinct_ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101"}' 'http://localhost:3000/api/v1/districts/attach_precinct' -H Content-Type:application/json
+
+List precincts attached to Travis County TX Congressional District 35
+
+    curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/districts/list_precincts' -H Content-Type:application/json

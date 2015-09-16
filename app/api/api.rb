@@ -105,6 +105,9 @@ class API < Grape::API
 			error!(value + ' is out of the range of ' + type, 400)
 		end
 
+		def error_already_attached(parent, child)
+			error!(child + ' is already attached to ' + parent, 400)
+		end
 		# error for if object ID exists, but is not the right type of object for what is expected?
 
 		# error for empty list of items in database?
@@ -365,20 +368,15 @@ class API < Grape::API
 		desc "List all precincts"
 		get do
 			# list precints
-
-			# Flintstones test message
-			
-      return Vssc::ReportingUnit.limit(10).collect do |p|
-        {
-          id: p.id,
-          ocdid: p.object_id
-        }
-      end
-      
-      #[ocd_Downtown001, ocd_Quarrytown002, ocd_QuarryCounty003, ocd_County004]
-			#[ocd_Downtown001]
+			return Vssc::ReportingUnit.limit(10).where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).collect do |p|
+				{
+					id: p.id,
+					ocdid: p.object_id
+				}
+			end
 		end
 
+		# Is it possible to get parent GPUnits?
 		desc "List districts attached to precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
@@ -402,52 +400,54 @@ class API < Grape::API
 			end
 		end
     
-    desc "List composing units of a precinct"
+	    desc "List composing units of a precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 		end
 		post :list_composing_precincts do
 			validate_ocdid(params[:ocdid])
-      p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
-      if p
-        status 200
-        return p.composing_gp_units
+			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:ocdid])
+			if p
+				status 200
+				return p.composing_gp_units.collect do |p|
+					{
+						id: p.id,
+						ocdid: p.object_id
+					}
+				end
 			else
 				# error if object does not exist
 				status 404
-        error_not_found(params[:ocdid])
+				error_not_found(params[:ocdid])
 			end
 		end
     
 
 		desc "Create precinct"
-    params do
-      requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
-      requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
-      requires :name, type: String, allow_blank: false, desc: "Name of precinct."
-    end
+		params do
+			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
+		end
 		post :create do
 			validate_ocdid(params[:ocdid])
 			validate_kml(params[:spatialextent])
 			validate_string_name(params[:name])
-			# create precinct
 
-			# error if object already exists
-			
-      if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
-  			error_already_exists(params[:ocdid])
-      end
-      
-      p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name])
-			
-      if p.save
-        status 200
-        return p
-      else
-        status 500
-        return p.errors
-      end
-      
+			# error if object already exists			
+			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
+			p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct"))
+
+			if p.save
+				status 200
+				return p
+			else
+				status 500
+				return p.errors
+			end
 		end
 
 		desc "Display full info on selected precinct"
@@ -456,24 +456,15 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-			# display selected precinct info
-      # case params[:ocdid]
-      # when ocd_Downtown001
-      #   data_precinct_Downtown001
-      # when ocd_Quarrytown002
-      #   data_precinct_Quarrytown002
-      # when ocd_QuarryCounty003
-      #   data_precinct_QuarryCounty003
-      # when ocd_County004
-      #   data_precinct_County004
-      p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
-      if p
-        status 200
-        return p
+      		#p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+      		p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:ocdid])
+			if p
+				status 200
+				return p
 			else
 				# error if object does not exist
 				status 404
-        error_not_found(params[:ocdid])
+				error_not_found(params[:ocdid])
 			end
 		end
 
@@ -487,32 +478,30 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			if params[:spatialextent] != "" && params[:spatialextent] 
 				validate_kml(params[:spatialextent])
-			end
+			end			
+			validate_string_name(params[:name])
 			
-      #validate_name(params[:name])
-			
-      # error if object does not exist
-      attributes = params.dup
+			# error if object does not exist
+			attributes = params.dup
 			p = Vssc::ReportingUnit.find_by_object_id(attributes.delete(:ocdid))
-      if p.nil?
-        status 400
-        error_not_found(params[:ocdid])
-      else
-        # update selected precinct
-        # TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
-        p.name = attributes[:name]
-        if p.save
-  			  status 200
-          return p
-        else
-          status 500
-          return p.errors
-        end
-      end
-
+			if p.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			else
+				# update selected precinct
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				p.name = attributes[:name]
+				if p.save
+					status 200
+					return p
+				else
+					status 500
+					return p.errors
+				end
+			end
 		end
 
-		desc "Attach a precinct to a precinct"
+		desc "Attach a precinct to a precinct, in the case of a split precinct"
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :composing_ocdid, type: String, allow_blank: false
@@ -520,28 +509,32 @@ class API < Grape::API
 		post :attach_precinct do
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:composing_ocdid])
-			
-      p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
-      if p.nil?
-        status 400
-        return error_not_found(params[:ocdid])
-      end
-      
-      composing_p = Vssc::ReportingUnit.find_by_object_id(params[:composing_ocdid])
-      if composing_p.nil?
-        status 400
-        error_not_found(params[:composing_ocdid])
-      end
-      
+
+			p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:ocdid])
+			end
+
+			composing_p = Vssc::ReportingUnit.find_by_object_id(params[:composing_ocdid])
+			if composing_p.nil?
+				status 400
+				error_not_found(params[:composing_ocdid])
+			end
+
+			if p.composing_gp_units.where(object_id: params[:composing_ocdid]).count > 0
+				error_already_attached(params[:ocdid], params[:composing_ocdid])
+			end
+
 			# attach precinct to precinct
-      p.composing_gp_units << composing_p
-      if p.save
-        status 200
-        return p.to_json(include: :composing_gp_units)
-      else
-        status500
-        return p.errors
-      end
+			p.composing_gp_units << composing_p
+			if p.save
+				status 200
+				return p.to_json(include: :composing_gp_units)
+			else
+				status 500
+				return p.errors
+			end
 		end
 
 
@@ -558,13 +551,16 @@ class API < Grape::API
 	end
 
 	# District methods
-	resource :district do
+	resource :districts do
 		desc "List all districts"
 		get do
-			# list districts
-
-			# Flintstones test message
-			[ocd_bedrock,ocd_cobblestone_county,ocd_mineraldistrict]
+			# list electoral districts
+			return Vssc::ReportingUnit.limit(10).where(is_electoral_district: true).collect do |d|
+				{
+					id: d.id,
+					ocdid: d.object_id
+				}
+			end
 		end
 
 		desc "List precincts attached to a district"
@@ -575,16 +571,21 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# list precincts attached to district from jurisdiction
 
-			status 200
-			if params[:ocdid] == ocd_bedrock
-				[ocd_Downtown001,ocd_Quarrytown002]
-			elsif params[:ocdid] == ocd_cobblestone_county
-				[ocd_Downtown001,ocd_Quarrytown002,ocd_QuarryCounty003,ocd_County004]
-			elsif params[:ocdid] == ocd_mineraldistrict
-				[ocd_Quarrytown002,ocd_QuarryCounty003]
+      		d = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(params[:ocdid])
+			if d
+				status 200
+				return d.composing_gp_units.collect do |p|
+					{
+						id: p.id,
+						ocdid: p.object_id
+					}
+				end
 			else
+				# error if object does not exist
+				status 404
 				error_not_found(params[:ocdid])
 			end
+
 		end
 
 		desc "Create district"
@@ -597,14 +598,21 @@ class API < Grape::API
 		post :create do
 			validate_ocdid(params[:ocdid])
 			validate_kml(params[:spatialextent])
-			validate_name(params[:name])
-			# create precinct and attach it to jurisdiction
+			validate_string_name(params[:name])
 
-			# error if object already exists
-			#error_already_exists(params[:ocdid])
+			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
 
-			# dummy message for testing
-			"creating district"
+			d = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], is_electoral_district: true)
+			
+			if d.save
+				status 200
+				return d
+			else
+				status 500
+				return d.errors
+			end
 		end
 
 		desc "Display district info"
@@ -615,27 +623,50 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# display info on the district
 
-			status 200
-			# dummy message for testing
-			"district info"
+  			#d = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+      		d = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(params[:ocdid])
+			if d
+				status 200
+				return d
+			else
+				# error if object does not exist
+				status 404
+				error_not_found(params[:ocdid])
+			end
 		end
 
 		desc "Update district"
 		params do
 			# not sure if jurisdiction ID is needed
 			requires :ocdid, type: String, allow_blank: false
-			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			#requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
 			requires :name, type: String, desc: "Name of precinct."
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
-			validate_kml(params[:spatialextent])
-			validate_name(params[:name])
-			# update info for the district
-
-			status 200
-			# dummy message for testing
-			"updating district"
+			if params[:spatialextent] != "" && params[:spatialextent] 
+				validate_kml(params[:spatialextent])
+			end			
+			validate_string_name(params[:name])
+			
+			# error if object does not exist
+			attributes = params.dup
+			p = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(attributes.delete(:ocdid))
+			if p.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			else
+				# update selected precinct
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				p.name = attributes[:name]
+				if p.save
+					status 200
+					return p
+				else
+					status 500
+					return p.errors
+				end
+			end
 		end
 
 		desc "Attach a precinct to a district"
@@ -646,11 +677,35 @@ class API < Grape::API
 		post :attach_precinct do
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:precinct_ocdid])
-			# attach precinct to district
 
-			status 200
-			# dummy message for testing
-			"attaching precinct " + params[:precinct_ocdid] + " to district " + params[:ocdid]
+			# confirm precinct OCDID exists and is a precinct
+			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:precinct_ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:precinct_ocdid])
+			end
+
+			# confirm OCDID exists and is a district
+			d = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(params[:ocdid])
+			if d.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			end
+
+			# make sure precinct is not already attached
+			if d.composing_gp_units.where(object_id: params[:precinct_ocdid]).count > 0
+				error_already_attached(params[:ocdid], params[:precinct_ocdid])
+			end
+
+			# attach precinct to precinct
+			d.composing_gp_units << p
+			if d.save
+				status 200
+				return d.to_json(include: :composing_gp_units)
+			else
+				status 500
+				return d.errors
+			end
 		end
 
 		desc "Detach a precinct from a district"
