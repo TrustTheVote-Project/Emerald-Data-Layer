@@ -4,7 +4,7 @@ Make sure your database is set up and the app is running
 
     bundle install
     rake db:migrate
-    
+    rails s
 
 Create Precint 101
 
@@ -83,3 +83,33 @@ Attach precinct 101 to Congressional District 35
 List precincts attached to Travis County TX Congressional District 35
 
     curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/districts/list_precincts' -H Content-Type:application/json
+
+
+Elections (WIP):
+
+    curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "November Primary", "election_type": "4", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
+
+Get all elections:
+
+    curl 'http://localhost:3000/api/v1/elections'
+
+Update election:
+    curl -d '{"id": "1", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "November Primary", "election_type": "4", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/update' -H Content-Type:application/json
+
+Parties:
+
+    Create test party with test OCDID: 
+
+    curl -d '{"ocdid": "/partytest/", "name": "Test Party", "color": "0x00ff00", "abbreviation": "T"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
+
+    Update party: 
+
+    curl -d '{"ocdid": "/partytest/", "name": "Test Party", "color": "0x00ff00", "abbreviation": "T"}' 'http://localhost:3000/api/v1/parties/update' -H Content-Type:application/json
+
+    Detail party:
+
+    curl -d '{"ocdid": "/partytest/"}' 'http://localhost:3000/api/v1/parties/read' -H Content-Type:application/json
+
+    List all parties: 
+
+    curl 'http://localhost:3000/api/v1/elections'

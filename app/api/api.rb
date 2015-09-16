@@ -102,7 +102,7 @@ class API < Grape::API
 
 		# error if enum position integer is out of the range of possible options
 		def error_enum_range(type, value)
-			error!(value + ' is out of the range of ' + type, 400)
+			error!(value.to_s + ' is out of the range of ' + type, 400)
 		end
 
 		def error_already_attached(parent, child)
@@ -186,6 +186,15 @@ class API < Grape::API
 		# both for use in checking if object has been created, and if it already has been created
 		def ocdid_exists(ocdid)
 			false
+		end
+
+		def get_enum_by_index(enum, index, descstring)
+			ret = enum.enums[(2 * index) + 1]
+			if ret
+				ret
+			else
+				error_enum_range(descstring, index)
+			end
 		end
 	end
 
@@ -708,6 +717,7 @@ class API < Grape::API
 			end
 		end
 
+		# How?
 		desc "Detach a precinct from a district"
 		params do
 			requires :ocdid, type: String, allow_blank: false
@@ -735,13 +745,17 @@ class API < Grape::API
 		end
 	end
 
-	resource :election do
+	resource :elections do
 		desc "List all elections"
 		get do
-			# list elections under given jurisdiction
-
-			# dummy message for testing
-			"elections"
+			return Vssc::Election.limit(10).collect do |e|
+				{
+					id: e.id,
+					name: e.name
+				}
+			end
+			#Vssc::Enum::ElectionType.class
+			#get_enum_by_index(Vssc::Enum::ElectionType, 35, "electiontype")
 		end
 
 		desc "List all elections under a certain scope"
@@ -764,35 +778,57 @@ class API < Grape::API
 			requires :date_year, type: Integer
 			requires :election_type, type: Integer
 			requires :name, type: String, allow_blank: false
-			requires :scope_id, type: String, allow_blank: false
+			requires :scope_ocdid, type: String, allow_blank: false
 		end
 		post :create do
 			validate_string_name(params[:name])
-			validate_ocdid_exists(params[:scope_id])
 			# create a new election
 
-			# validate whether election type enum integer is within range
+			# validate whether scope OCDID is proper
+			s = Vssc::GpUnit.find_by_object_id(params[:scope_ocdid])
+			if s.nil?
+				status 400
+				return error_not_found(params[:scope_ocdid])
+			end
 
-			# dummy message for testing
-			"creating election"
+			# Language for internationalized name?
+			name = Vssc::InternationalizedText.new()
+			name.language_strings << Vssc::LanguageString.new(language: "English", text: params[:name])
+
+			# Asks for countstatus for some reason?
+			e = Vssc::Election.new(election_scope_identifier: params[:scope_ocdid], name: name, 
+				election_type: get_enum_by_index(Vssc::Enum::ElectionType, params[:election_type], "electiontype"),
+				date: Date.new(params[:date_year], params[:date_month], params[:date_day]))
+
+			if e.save
+				status 200
+				return e
+			else
+				status 500
+				return e.errors
+			end
 		end
 
 		desc "Detail one election"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :id, type: String, allow_blank: false
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-			# detail selected election
-			status 200
-
-			# dummy message for testing
-			"election"
+      		e = Vssc::Election.find_by_object_id(params[:id])
+			if e
+				status 200
+				return e
+			else
+				# error if object does not exist
+				status 404
+				error_not_found(params[:id])
+			end
 		end
 
 		desc "Update one election"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :id, type: String, allow_blank: false
 			requires :date_month, type: Integer
 			requires :date_day, type: Integer
 			requires :date_year, type: Integer
@@ -800,13 +836,31 @@ class API < Grape::API
 			requires :name, type: String, allow_blank: false
 		end
 		post :update do
-			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
-			# update selected election
-			status 200
-
-			# dummy message for testing
-			"updating"
+			
+			# error if object does not exist
+			attributes = params.dup
+			e = Vssc::Election.where(id: params[:id])
+			#return e
+			if e.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			else
+				# update selected precinct
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				#e.name = attributes[:name]
+				if params[:election_type]
+					#e.election_type = get_enum_by_index(Vssc::Enum::ElectionType, params[:election_type], "ElectionType")
+					"hello"
+				end
+				if e.save
+					status 200
+					return e
+				else
+					status 500
+					return e.errors
+				end
+			end
 		end
 	end
 
@@ -1052,30 +1106,46 @@ class API < Grape::API
 		end
 	end
 
-	resource :party do
+	resource :parties do
 		desc "List all parties"
 		get do
-			# list all defined parties
-
-			# dummy message for testing
-			[ocd_party_marble, ocd_party_granite]
+			return Vssc::Party.limit(10).collect do |p|
+				{
+					id: p.id,
+					ocdid: p.object_id
+				}
+			end
 		end
 
 		desc "Create a new party"
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String, allow_blank: false
-			requires :color, type: Integer, desc: "HTML color of party."
+			requires :color, type: String, desc: "HTML color string of party."
 			requires :abbreviation, type: String, allow_blank: false
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
-			# create party
 
-			# dummy message for testing
-			"creating party " + params[:name]
+			# error if object already exists			
+			if Vssc::Party.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
+			name = Vssc::InternationalizedText.new()
+			name.language_strings << Vssc::LanguageString.new(language: "English", text: params[:name])
+
+			p = Vssc::Party.new(object_id: params[:ocdid], name: name, color: params[:color], abbreviation: params[:abbreviation])
+
+			if p.save
+				status 200
+				return p(include: :language_strings)
+			else
+				status 500
+				return p.errors
+			end
 		end
 
 		desc "Detail a party"
@@ -1084,15 +1154,14 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-			# detail party
-
-			status 200
-			# dummy message for testing
-			if params[:ocdid] == ocd_party_marble
-				data_party_marble
-			elsif params[:ocdid] == ocd_party_granite
-				data_party_granite
+      		p = Vssc::Party.find_by_object_id(params[:ocdid])
+			if p
+				status 200
+				# Include name data
+				return p.to_json(:include => {:name => { :include => :language_strings}})
 			else
+				# error if object does not exist
+				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -1101,18 +1170,42 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
-			requires :color, type: Integer, desc: "HTML color of party."
+			requires :color, type: String, desc: "HTML color string of party."
 			requires :abbreviation, type: String
 		end
 		post :update do
 			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
-			# update party
-
-			status 200
-			# dummy message for testing
-			"updating party"
+			
+			# error if object does not exist
+			attributes = params.dup
+			p = Vssc::Party.find_by_object_id(attributes.delete(:ocdid))
+			if p.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			else
+				# update selected party
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				# only update if string not empty
+				if params[:name].length > 0
+					p.name.language_strings[0].text = params[:name]
+				end
+				if params[:color].length > 0
+					p.color = params[:color]
+				end
+				if params[:abbreviation].length > 0
+					p.abbreviation = params[:abbreviation]
+				end
+				if p.save
+					status 200
+					# Include name data
+					return p.to_json(:include => {:name => { :include => :language_strings}})
+				else
+					status 500
+					return p.errors
+				end
+			end
 		end
 	end
 
