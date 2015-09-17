@@ -407,18 +407,27 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:child_ocdid])
 
-			# error if object does not exist
-			if params[:ocdid] != ocd_cobblestone_county
-				error_not_found(params[:ocdid])
-			elsif params[:child_ocdid] != ocd_bedrock && params[:child_ocdid] != ocd_cobblestone_county && params[:child_ocdid] != ocd_mineraldistrict 
-				# error if child object does not exist
-				error_not_found(params[:child_id])
-			else
-				# detach the current child
+			p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:ocdid])
+			end
 
-				# dummy message for testing
+			c = p.composing_gp_units.find_by_object_id(params[:child_ocdid])
+			if c.nil?
+				status 400
+				error_not_found(params[:child_ocdid])
+			end
+
+			# delete only association
+			p.composing_gp_units.delete(c)
+
+			if p.save
 				status 200
-				"detaching"
+				return p.to_json(include: :composing_gp_units)
+			else
+				status 500
+				return p.errors
 			end
 		end
 	end
@@ -604,6 +613,39 @@ class API < Grape::API
 			end
 		end
 
+		desc "Detach a precinct from a precinct, in the case of a split precinct"
+		params do
+			requires :ocdid, type: String, allow_blank: false
+			requires :composing_ocdid, type: String, allow_blank: false
+		end
+		post :detach_precinct do
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:composing_ocdid])
+
+			p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:ocdid])
+			end
+
+			composing_p = p.composing_gp_units.find_by_object_id(params[:composing_ocdid])
+			if composing_p.nil?
+				status 400
+				error_not_found(params[:composing_ocdid])
+			end
+
+			# only delete association
+			p.composing_gp_units.delete(composing_p)
+
+			if p.save
+				status 200
+				return p.to_json(include: :composing_gp_units)
+			else
+				status 500
+				return p.errors
+			end
+		end
+
 
 		desc "Get spatial extent."
 		params do
@@ -744,18 +786,18 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:precinct_ocdid])
 
-			# confirm precinct OCDID exists and is a precinct
-			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:precinct_ocdid])
-			if p.nil?
-				status 400
-				return error_not_found(params[:precinct_ocdid])
-			end
-
 			# confirm OCDID exists and is a district
 			d = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(params[:ocdid])
 			if d.nil?
 				status 400
 				error_not_found(params[:ocdid])
+			end
+
+			# confirm precinct OCDID exists and is a precinct
+			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:precinct_ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:precinct_ocdid])
 			end
 
 			# make sure precinct is not already attached
@@ -783,11 +825,31 @@ class API < Grape::API
 		post :detach_precinct do
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:precinct_ocdid])
-			# Detach precinct from district
 
-			status 200
-			# dummy message for testing
-			"detaching precinct " + params[:precinct_ocdid] + " from district " + params[:ocdid]
+			# confirm OCDID exists and is a district
+			d = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(params[:ocdid])
+			if d.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			end
+
+			# confirm precinct OCDID exists in district's subunits and is a precinct
+			p = d.composing_gp_units.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:precinct_ocdid])
+			if p.nil?
+				status 400
+				return error_not_found(params[:precinct_ocdid])
+			end
+
+			# only delete association
+			d.composing_gp_units.delete(p)
+
+			if d.save
+				status 200
+				return d.to_json(include: :composing_gp_units)
+			else
+				status 500
+				return d.errors
+			end
 		end
 
 		desc "Get spatial extent."
@@ -861,7 +923,8 @@ class API < Grape::API
 			# Asks for countstatus for some reason?
 			e = Vssc::Election.new(election_scope_identifier: params[:scope_ocdid], name: name, 
 				election_type: get_enum_by_index(Vssc::Enum::ElectionType, params[:election_type], "electiontype"),
-				date: Date.new(params[:date_year], params[:date_month], params[:date_day]))
+				date: Date.new(params[:date_year], params[:date_month], params[:date_day]),
+				end_date: Date.new(params[:date_year], params[:date_month], params[:date_day]))
 
 			if e.save
 				status 200
@@ -1098,12 +1161,11 @@ class API < Grape::API
 				status 500
 				return cor.errors
 			end
-
 		end
 
 		desc "Detach an office from contest"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 			requires :office_ocdid, type: String, allow_blank: false
 		end
@@ -1111,11 +1173,44 @@ class API < Grape::API
 			validate_ocdid(params[:election_id])
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:office_ocdid])
-			# detach the office
-			status 200
 
-			# dummy message for testing
-			"removing office from contest"
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
+
+			# confirm OCDID exists and is a candidate contest
+			#cc = e.contests.find_by_object_id(params[:ocdid])
+
+			# temporary until elections work
+			cc = Vssc::CandidateContest.find_by_object_id(params[:ocdid])
+			if cc.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			end
+
+			o = Vssc::Office.find_by_object_id(params[:office_ocdid])
+			if o.nil?
+				status 400
+				error_not_found(params[:office_ocdid])
+			end
+
+			cor = cc.contest_office_id_refs.where(office_id_ref: params[:office_ocdid]).first
+			if cor.nil?
+				status 400
+				error_not_found(params[:office_ocdid])
+			end
+
+			cc.contest_office_id_refs.delete(cor)
+			
+			if cc.save
+				status 200
+				return cc
+			else
+				status 500
+				return cc.errors
+			end
 		end
 	end
 

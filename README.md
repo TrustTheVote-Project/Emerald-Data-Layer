@@ -116,6 +116,10 @@ Jurisdictions:
 
         curl -d '{"ocdid": "ocd-division/country:us/state:tx/county:travis", "child_ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:102"}' 'http://localhost:3000/api/v1/jurisdictions/attach' -H Content-Type:application/json
 
+    Detach Precinct 102 from Travis County TX
+
+        curl -d '{"ocdid": "ocd-division/country:us/state:tx/county:travis", "child_ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:102"}' 'http://localhost:3000/api/v1/jurisdictions/detach' -H Content-Type:application/json
+
     List subunits of Travis County TX
 
         curl -d '{"ocdid": "ocd-division/country:us/state:tx/county:travis"}' 'http://localhost:3000/api/v1/jurisdictions/list_subunits' -H Content-Type:application/json
@@ -210,3 +214,7 @@ Ballot Measure Contest:
         curl -d '{"ocdid": "contest:test-ballot-measure/ocd-division/country:us/state:tx/", "election_id": "congressional-35", "name": "TestName", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TestAbbreviation", "ballot_title": "TestBallotTitle", "ballot_subtitle": "TestBallotSubtitle", "ballot_measure_type": "0", "sequence_order": "0", "pro_statement": "TestPro", "con_statement": "TestCon", "passage_threshold": "60%", "full_text": "Test Full Text", "summary_text": "Test Summary Text", "effect_of_abstain": "Test Abstain Effect"}' 'http://localhost:3000/api/v1/ballot_measure_contests/create' -H Content-Type:application/json
 
         curl -d '{"ocdid": "contest:test-ballot-measure/ocd-division/country:us/state:tx/", "election_id": "congressional-35"}' 'http://localhost:3000/api/v1/ballot_measure_contests/read' -H Content-Type:application/json
+
+All contests: 
+
+        curl -d '{"election_id": "congressional-35"}' 'http://localhost:3000/api/v1/contests' -H Content-Type:application/json

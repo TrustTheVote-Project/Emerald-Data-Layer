@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/TrustTheVote-Project/VEDaStore
-  revision: 31c5b7cb11899ef49053f44c32645f4f1e4003bb
+  revision: bab665f30c04f83235bcadfaef3e7ee6d91df7fe
   specs:
-    VEDaStore (0.0.1)
+    VEDaStore (0.0.2)
       nokogiri (~> 1.6.0)
       rails (~> 4.2.1)
 
@@ -180,7 +180,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  VEDaStore!
+  VEDaStore (= 0.0.2)!
   byebug
   coffee-rails (~> 4.1.0)
   grape
@@ -194,3 +194,6 @@ DEPENDENCIES
   turbolinks
   uglifier (>= 1.3.0)
   web-console (~> 2.0)
+
+BUNDLED WITH
+   1.10.6
