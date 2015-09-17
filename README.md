@@ -173,3 +173,40 @@ Candidate:
     detail
 
         curl -d '{"election_id": "congressional-35", "ocdid": "candidate:lloyd-doggett-1/"}' 'http://localhost:3000/api/v1/candidates/read' -H Content-Type:application/json
+
+Office: 
+
+    Create (incomplete)
+        curl -d '{"ocdid": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35", "name": "Texas 35th Congressional District", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "holder_ocdid": "candidate:lloyd-doggett-1/", "deadline_year": "1", "deadline_month": "1", "deadline_day": "1", "deadline_hour": "1", "deadline_minute": "1", "deadline_timezone": "1", "ispartisan": "false", "address_line": "217 W Travis St, San Antonio, TX 78205", "email": "idontknow@tx.gov", "fax": "0", "contact_name": "Unknown", "phone": "(210) 704-1080", "uri": "http://doggett.house.gov/", "term_start_month": "1", "term_start_day": "3", "term_start_year": "2015", "term_end_month": "1", "term_end_day": "3", "term_end_year": "2017", "term_type": "0"}' 'http://localhost:3000/api/v1/offices/create' -H Content-Type:application/json
+
+    Detail office:
+
+        curl -d '{"ocdid": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/offices/read' -H Content-Type:application/json
+
+    List all offices:
+
+        curl 'http://localhost:3000/api/v1/offices'
+
+Candidate Contest:
+
+    Create candidate contest:
+
+        curl -d '{"ocdid": "contest:tx-congressional-35/ocd-division/country:us/state:tx/cd:35", "election_id": "congressional-35", "name": "Texas Congressional Representative, District 35", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "0", "sequence_order": "0"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
+
+    Read detail on it:
+
+        curl -d '{"election_id": "congressional-35", "ocdid": "contest:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/read' -H Content-Type:application/json
+
+    List all candidate contests:
+
+        curl -d '{"election_id": "congressional-35"}' 'http://localhost:3000/api/v1/candidate_contests' -H Content-Type:application/json
+
+    Attach office to contest
+
+        curl -d '{"election_id": "congressional-35", "ocdid": "contest:tx-congressional-35/ocd-division/country:us/state:tx/cd:35", "office_ocdid": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/attach_office' -H Content-Type:application/json
+
+Ballot Measure Contest:
+
+        curl -d '{"ocdid": "contest:test-ballot-measure/ocd-division/country:us/state:tx/", "election_id": "congressional-35", "name": "TestName", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TestAbbreviation", "ballot_title": "TestBallotTitle", "ballot_subtitle": "TestBallotSubtitle", "ballot_measure_type": "0", "sequence_order": "0", "pro_statement": "TestPro", "con_statement": "TestCon", "passage_threshold": "60%", "full_text": "Test Full Text", "summary_text": "Test Summary Text", "effect_of_abstain": "Test Abstain Effect"}' 'http://localhost:3000/api/v1/ballot_measure_contests/create' -H Content-Type:application/json
+
+        curl -d '{"ocdid": "contest:test-ballot-measure/ocd-division/country:us/state:tx/", "election_id": "congressional-35"}' 'http://localhost:3000/api/v1/ballot_measure_contests/read' -H Content-Type:application/json

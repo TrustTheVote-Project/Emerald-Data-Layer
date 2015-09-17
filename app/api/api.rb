@@ -465,7 +465,6 @@ class API < Grape::API
 					ocdid: r.object_id
 				}
 			end
-
 		end
     
 	    desc "List composing units of a precinct"
@@ -525,7 +524,7 @@ class API < Grape::API
 		post :read do
 			validate_ocdid(params[:ocdid])
       		#p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
-      		p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:ocdid])
+			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:ocdid])
 			if p
 				status 200
 				return p
@@ -928,26 +927,27 @@ class API < Grape::API
 		end
 	end
 
-	resource :candidate_contest do
+	resource :candidate_contests do
 		desc "List all candidate contests under an election"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
-			validate_ocdid(params[:election_ocdid])
 			status 200
-			# list all candidate contests
-			if params[:election_ocdid] == ocd_election
-				[ocd_contest_mayor,ocd_quarry_comm]
-			else
-				error_invalid(params[:election_ocdid])
+			return Vssc::CandidateContest.limit(10).collect do |cc|
+				{
+					id: cc.id,
+					ocdid: cc.object_id
+				}
 			end
 		end
 
 		desc "Create candidate contest"
 		params do
 			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
-			requires :election_ocdid, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :ocdid, type: String, allow_blank: false, desc: "OCDID of contest being created"
+			requires :election_id, type: String, allow_blank: false, desc: "id of election the contest is under."
+			requires :scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
 			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
@@ -955,38 +955,70 @@ class API < Grape::API
 			requires :sequence_order, type: Integer, allow_blank: false
 		end
 		post :create do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid_exists(params[:election_ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:ballot_title])
 			validate_string_name(params[:ballot_subtitle])
-			# validate vote variation type
+			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:scope_ocdid])
 
-			# create the candidate contest
+			# error if object already exists			
+			if Vssc::CandidateContest.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
 
-			# dummy message for testing
-			"creating contest " + params[:name]
+			# verify scope ocdid exists
+			s = Vssc::ReportingUnit.find_by_object_id(params[:scope_ocdid])
+			if s.nil?
+				status 400
+				error_not_found(params[:scope_ocdid])
+			end
+
+			title = Vssc::InternationalizedText.new()
+			title.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:ballot_title])
+			subtitle = Vssc::InternationalizedText.new()
+			subtitle.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:ballot_subtitle])
+
+			# ballot title and ballot sub title should not be ID fields
+			cc = Vssc::CandidateContest.new(object_id: params[:ocdid], name: params[:name], abbreviation: params[:abbreviation], 
+				ballot_title_id: title, ballot_sub_title_id: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:scope_ocdid], 
+				vote_variation_type: get_enum_by_index(Vssc::Enum::VoteVariationType, params[:vote_variation_type], "votevariationtype"))
+
+			if cc.save
+				status 200
+				return cc
+			else
+				status 500
+				return cc.errors
+			end
 		end
 
 		desc "List detail of a candidate contest"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-			validate_ocdid(params[:election_ocdid])
-			status 200
-			if params[:election_ocdid] == ocd_election
-				if params[:ocdid] == ocd_contest_mayor
-					data_contest_mayor
-				elsif params[:ocdid] == ocd_quarry_comm
-					data_quarry_comm
-				else
-					error_invalid(params[:ocdid])
-				end
+			validate_ocdid(params[:election_id])
+
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
+
+			# confirm OCDID exists and is a candidate contest
+			#cc = e.contests.find_by_object_id(params[:ocdid])
+
+			# temporary until elections work
+			cc = Vssc::CandidateContest.find_by_object_id(params[:ocdid])
+			if cc
+				status 200
+				return cc
 			else
-				error_invalid(params[:election_ocdid])
+				# error if object does not exist
+				status 404
+				error_not_found(params[:ocdid])
 			end
 		end
 
@@ -1015,19 +1047,58 @@ class API < Grape::API
 
 		desc "Attach an office to contest"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 			requires :office_ocdid, type: String, allow_blank: false
 		end
 		post :attach_office do
-			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:office_ocdid])
-			# attach the office
-			status 200
 
-			# dummy message for testing
-			"adding office to contest"
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
+
+			# confirm OCDID exists and is a candidate contest
+			#cc = e.contests.find_by_object_id(params[:ocdid])
+
+			# temporary until elections work
+			cc = Vssc::CandidateContest.find_by_object_id(params[:ocdid])
+			if cc.nil?
+				status 400
+				error_not_found(params[:ocdid])
+			end
+
+			o = Vssc::Office.find_by_object_id(params[:office_ocdid])
+			if o.nil?
+				status 400
+				error_not_found(params[:office_ocdid])
+			end
+
+			# make sure connection does not already exist
+			if cc.contest_office_id_refs.where(office_id_ref: params[:office_ocdid]).where(contest_id: cc.id).size > 0
+				error_already_attached(params[:ocdid], params[:office_ocdid])
+			end
+
+			cor = Vssc::ContestOfficeIdRef.new(office_id_ref: params[:office_ocdid])
+
+			cc.contest_office_id_refs << cor
+
+			if cor.save
+				if cc.save
+					status 201
+					return cor
+				else
+					status 500
+					return cc.errors
+				end
+			else
+				status 500
+				return cor.errors
+			end
+
 		end
 
 		desc "Detach an office from contest"
@@ -1037,7 +1108,7 @@ class API < Grape::API
 			requires :office_ocdid, type: String, allow_blank: false
 		end
 		post :detach_office do
-			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:election_id])
 			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:office_ocdid])
 			# detach the office
@@ -1315,6 +1386,7 @@ class API < Grape::API
 				status 200
 				# Include name data
 				return p.to_json(:include => {:name => { :include => :language_strings}})
+				#return [p, p.name.language_strings]
 			else
 				# error if object does not exist
 				status 404
@@ -1365,27 +1437,27 @@ class API < Grape::API
 		end
 	end
 
-	resource :ballot_measure_contest do
+	resource :ballot_measure_contests do
 		desc "List all ballot measure contests"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
-			validate_ocdid(params[:election_ocdid])
-			# list all ballot measure contests
 			status 200
-			if params[:election_ocdid] == ocd_election
-				[ocd_referendum]
-			else
-				# dummy message for testing
-				['CONTEST_1', 'CONTEST_2', 'CONTEST_3']
+			return Vssc::BallotMeasureContest.limit(10).collect do |cc|
+				{
+					id: cc.id,
+					ocdid: cc.object_id
+				}
 			end
 		end
 
 		desc "Create ballot measure contest"
 		params do
 			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
-			requires :election_ocdid, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :election_id, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
+			requires :scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
+
 			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
@@ -1400,7 +1472,7 @@ class API < Grape::API
 			requires :effect_of_abstain, type: String, allow_blank: false
 		end
 		post :create do
-			validate_ocdid(params[:election_ocdid])
+			validate_ocdid(params[:scope_ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
 			validate_string_name(params[:ballot_title])
@@ -1414,28 +1486,79 @@ class API < Grape::API
 			validate_string_text(params[:effect_of_abstain])
 			# create the ballot measure contest
 
-			# dummy message for testing
-			"creating contest " + params[:name]
+			# error if object already exists			
+			if Vssc::BallotMeasureContest.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
+			# verify scope ocdid exists
+			s = Vssc::ReportingUnit.find_by_object_id(params[:scope_ocdid])
+			if s.nil?
+				status 400
+				error_not_found(params[:scope_ocdid])
+			end
+
+			title = Vssc::InternationalizedText.new()
+			title.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:ballot_title])
+			subtitle = Vssc::InternationalizedText.new()
+			subtitle.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:ballot_subtitle])
+
+			pro = Vssc::InternationalizedText.new()
+			pro.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:pro_statement])
+			con = Vssc::InternationalizedText.new()
+			con.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:con_statement])
+			threshold = Vssc::InternationalizedText.new()
+			threshold.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:passage_threshold])
+			fulltext = Vssc::InternationalizedText.new()
+			fulltext.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:full_text])
+			summary = Vssc::InternationalizedText.new()
+			summary.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:summary])
+			abstain = Vssc::InternationalizedText.new()
+			abstain.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:effect_of_abstain])
+
+			#test = Vssc::BallotMeasureContest.new()
+			#return test
+
+			# ballot title and ballot sub title should not be ID fields
+			cc = Vssc::BallotMeasureContest.new(object_id: params[:ocdid], name: params[:name], abbreviation: params[:abbreviation], 
+				ballot_title_id: title, ballot_sub_title_id: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:scope_ocdid], 
+				ballot_measure_type: get_enum_by_index(Vssc::Enum::BallotMeasureType, params[:ballot_measure_type], "ballotmeasuretype"),
+				pro_statement_id: pro, con_statement_id: con, passage_threshold_id: threshold, full_text_id: fulltext, summary_text: summary, effect_of_abstain_id: abstain)
+
+			if cc.save
+				status 200
+				return cc
+			else
+				status 500
+				return cc.errors
+			end
 		end
 
 		desc "List detail of a ballot measure contest"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 			requires :ocdid, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:election_ocdid])
 			validate_ocdid(params[:ocdid])
-			status 200
-			# detail the selected contest
-			if params[:election_ocdid] = ocd_election
-				if params[:ocdid] == ocd_referendum
-					data_referendum
-				else
-					error_invalid(params[:ocdid])
-				end
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
+
+			# confirm OCDID exists and is a candidate contest
+			#cc = e.contests.find_by_object_id(params[:ocdid])
+
+			# temporary until elections work
+			cc = Vssc::BallotMeasureContest.find_by_object_id(params[:ocdid])
+			if cc
+				status 200
+				return cc
 			else
-				error_invalid(params[:election_ocdid])
+				# error if object does not exist
+				status 404
+				error_not_found(params[:ocdid])
 			end
 		end
 
@@ -1567,19 +1690,18 @@ class API < Grape::API
 		end
 	end
 
-	resource :contest do
+	resource :contests do
 		desc "List all contests under a certain election, both candidate and ballot measure"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
+			requires :election_id, type: String, allow_blank: false
 		end
 		post do
-			validate_ocdid(params[:election_ocdid])
 			status 200
-			# return all contests
-			if params[:election_ocdid] == ocd_election
-				[ocd_contest_mayor,ocd_quarry_comm,ocd_referendum]
-			else
-				error_invalid(params[:election_ocdid])
+			return Vssc::Contest.limit(10).collect do |cc|
+				{
+					id: cc.id,
+					ocdid: cc.object_id
+				}
 			end
 		end
 	end
@@ -1614,13 +1736,15 @@ class API < Grape::API
 		end
 	end
 
-	resource :office do
+	resource :offices do
 		desc "List all offices"
 		get do
-			# list all offices
-
-			# dummy message for testing
-			[ocd_office_mayor, ocd_office_quarrycomm]
+			return Vssc::Office.limit(10).collect do |o|
+				{
+					id: o.id,
+					ocdid: o.object_id
+				}
+			end
 		end
 
 		desc "Create a new office"
@@ -1632,6 +1756,9 @@ class API < Grape::API
 			requires :deadline_month, type: Integer, desc: "Filing deadling month"
 			requires :deadline_day, type: Integer, desc: "Filing deadline day"
 			requires :deadline_year, type: Integer, desc: "Filing deadline year"
+			requires :deadline_hour, type: Integer, desc: "Filing deadling hour"
+			requires :deadline_minute, type: Integer, desc: "Filing deadline minute"
+			requires :deadline_timezone, type: Integer, desc: "Filing deadline timezone, +UTC."
 			requires :ispartisan, type: Boolean
 
 			# Contact info portion
@@ -1651,7 +1778,6 @@ class API < Grape::API
 			requires :term_end_day, type: Integer, allow_blank: false
 			requires :term_end_year, type: Integer, allow_blank: false
 			requires :term_type, type: Integer, allow_blank: false, desc: "Enum position based on enum in standard"
-
 		end
 		post :create do
 			validate_ocdid(params[:ocdid])
@@ -1661,10 +1787,66 @@ class API < Grape::API
 			validate_string_name(params[:contact_name])
 			validate_ocdid_duplicate(params[:ocdid])
 			# verify phone numbers?
-			# create a new office
 
-			# dummy message for testing
-			"creating new office"
+			# error if object already exists
+			if Vssc::Office.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
+			# validate that scope, holder OCDIDs exist
+			s = Vssc::ReportingUnit.find_by_object_id(params[:scope_ocdid])
+			if s.nil?
+				status 400
+				error_not_found(params[:scope_ocdid])
+			end
+			# person or candidate?
+			h = Vssc::Candidate.find_by_object_id(params[:holder_ocdid])
+			if h.nil?
+				status 400
+				error_not_found(params[:holder_ocdid])
+			end
+
+			#c = Vssc::ContactInformation.new(address_line: [params[:address_line]], email: [params[:email]], fax: [params[:fax]],
+				#name: params[:contact_name], phone: [params[:phone]], uri: [params[:uri]])
+
+			#t = Vssc::Term(start_date: Date.new(params[:term_start_year], params[:term_start_month], params[:term_start_day]),
+			#	end_date: Date.new(params[:term_end_year], params[:term_end_month], params[:term_end_day]),
+			#	type: get_enum_by_index(Vssc::Enum::OfficeTermType, params[:term_type], "officetermtype"))
+
+			oname = Vssc::InternationalizedText.new()
+			oname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
+
+			# How does office holder work
+			o = Vssc::Office.new(object_id: params[:ocdid], name: oname, jurisdictional_scope_identifier: params[:scope_ocdid],
+				filing_deadline: DateTime.new(params[:deadline_year], params[:deadline_month], params[:deadline_day], 
+					params[:deadline_hour], params[:deadline_minute], 0, params[:deadline_timezone]),
+				is_partisan: params[:ispartisan])
+			# contact_information: c, term: t, 
+
+			#if c.save
+			#	if t.save
+			#		if p.save
+			#			return [p,c,t]
+			#		else
+			#			status 500
+			#			return p.errors
+			#		end
+			#	else
+			#		status 500
+			#		return t.errors
+			#	end
+			#else
+			#	status 500
+			#	return c.errors
+			#end
+
+			if o.save
+				#return [o,c,t]
+				return o
+			else
+				status 500
+				return o.errors
+			end
 		end
 
 		desc "Detail an office"
@@ -1673,13 +1855,13 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-			status 200
-			# detail the office
-			if params[:ocdid] == ocd_office_mayor
-				data_office_mayor
-			elsif params[:ocdid] == ocd_office_quarrycomm
-				data_office_quarrycomm
+      		o = Vssc::Office.find_by_object_id(params[:ocdid])
+			if o
+				status 200
+				return o
 			else
+				# error if object does not exist
+				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
