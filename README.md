@@ -10,15 +10,15 @@ Precincts:
 
     Create Precint 101 (parent of split precincts)
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101"}' 'http://localhost:3000/api/v1/precincts/create_combined' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101", "spatial_format": "kml"}' 'http://localhost:3000/api/v1/precincts/create_combined' -H Content-Type:application/json
 
     Create Precinct 102
       
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:102", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 102"}' 'http://localhost:3000/api/v1/precincts/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:102", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 102", "spatial_format": "kml"}' 'http://localhost:3000/api/v1/precincts/create' -H Content-Type:application/json
 
         With passing actual KML file:
 
-        curl -F "ocdid=ocd-division/country:us/state:ma/county:travis/precinct:102" -F "spatialextent=@./testkml.kml" -F "name=Precinct 102" http://localhost:3000/api/v1/precincts/create
+        curl -F "ocdid=ocd-division/country:us/state:ma/county:travis/precinct:102" -F "spatialextent=@./testkml.kml" -F "name=Precinct 102" -F "spatial_format=kml" http://localhost:3000/api/v1/precincts/create
 
     Rename Precinct 102
 
@@ -34,9 +34,9 @@ Precincts:
 
     Create Split Precincts: (101-A and 101-B)
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-A", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-A"}' 'http://localhost:3000/api/v1/precincts/create_split' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-A", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-A", "spatial_format": "kml"}' 'http://localhost:3000/api/v1/precincts/create_split' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-B", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-B"}' 'http://localhost:3000/api/v1/precincts/create_split' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-B", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-B", "spatial_format": "kml"}' 'http://localhost:3000/api/v1/precincts/create_split' -H Content-Type:application/json
 
 
     Attach 101-A to Precinct 101
@@ -65,7 +65,7 @@ Districts:
 
     Create Travis County TX Congressional District 35
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35", "spatialextent": {"filename": "myfile.kml"}, "name": "District 35, Congressional"}' 'http://localhost:3000/api/v1/districts/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:tx/cd:35", "spatialextent": {"filename": "myfile.kml"}, "name": "District 35, Congressional", "spatial_format": "kml"}' 'http://localhost:3000/api/v1/districts/create' -H Content-Type:application/json
 
     Edit Travis Congressional District 35
 
@@ -130,7 +130,7 @@ Jurisdictions:
 Elections (WIP):
 
     Create election:
-        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
+        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
 
     Get all elections:
 
@@ -142,15 +142,19 @@ Elections (WIP):
 
     Read: 
 
-        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/read' -H Content-Type:application/json
+        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015"}' 'http://localhost:3000/api/v1/elections/read' -H Content-Type:application/json
 
     Update election:
 
-        curl -d '{"id": "1", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "November Primary", "election_type": "4", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/update' -H Content-Type:application/json
+        curl -d '{"id": "1", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "November Primary", "election_type": "4", "date_month": "11", "date_day": "6", "date_year": "2015"}' 'http://localhost:3000/api/v1/elections/update' -H Content-Type:application/json
 
     List contests in election:
 
-        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/list_contests' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015"}' 'http://localhost:3000/api/v1/elections/list_contests' -H Content-Type:application/json
+    List candidate contests in election:
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015"}' 'http://localhost:3000/api/v1/elections/list_candidate_contests' -H Content-Type:application/json
+    List ballot measure contests in election:
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015"}' 'http://localhost:3000/api/v1/elections/list_ballot_measure_contests' -H Content-Type:application/json
 
 Parties:
 
@@ -210,15 +214,15 @@ Candidate Contest:
 
     Create candidate contest:
 
-        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995", "name": "Texas Congressional Representative, District 35", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "1ofm", "sequence_order": "0", "votes_allowed":"1"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "Texas Congressional Representative, District 35", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "1ofm", "sequence_order": "0", "votes_allowed":"1"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
 
     Read detail on it:
 
-        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995", "object_id": "Texas Congressional Representative, District 35-ocd-division/country:us/state:tx/cd:35-11/16/1995"}' 'http://localhost:3000/api/v1/candidate_contests/read' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "object_id": "contest:Texas Congressional Representative, District 35-election:ocd-division/country:us/state:tx/cd:35-11/6/2015"}' 'http://localhost:3000/api/v1/candidate_contests/read' -H Content-Type:application/json
 
-    List all candidate contests:
+    List all candidate contests: (see election for listing candidate contests in an election)
 
-        curl -d '{"election_id": "congressional-35"}' 'http://localhost:3000/api/v1/candidate_contests' -H Content-Type:application/json
+        curl 'http://localhost:3000/api/v1/candidate_contests'
 
     Attach office to contest
 
@@ -226,9 +230,12 @@ Candidate Contest:
 
 Ballot Measure Contest:
 
-        curl -d '{"ocdid": "contest:test-ballot-measure/ocd-division/country:us/state:tx/", "election_id": "congressional-35", "name": "TestName", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TestAbbreviation", "ballot_title": "TestBallotTitle", "ballot_subtitle": "TestBallotSubtitle", "ballot_measure_type": "0", "sequence_order": "0", "pro_statement": "TestPro", "con_statement": "TestCon", "passage_threshold": "60%", "full_text": "Test Full Text", "summary_text": "Test Summary Text", "effect_of_abstain": "Test Abstain Effect"}' 'http://localhost:3000/api/v1/ballot_measure_contests/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "TestName", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TestAbbreviation", "ballot_title": "TestBallotTitle", "ballot_subtitle": "TestBallotSubtitle", "ballot_measure_type": "ballotmeasure", "sequence_order": "0", "pro_statement": "TestPro", "con_statement": "TestCon", "passage_threshold": "60%", "full_text": "Test Full Text", "summary_text": "Test Summary Text", "effect_of_abstain": "Test Abstain Effect"}' 'http://localhost:3000/api/v1/ballot_measure_contests/create' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "contest:test-ballot-measure/ocd-division/country:us/state:tx/", "election_id": "congressional-35"}' 'http://localhost:3000/api/v1/ballot_measure_contests/read' -H Content-Type:application/json
+        
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015"}' 'http://localhost:3000/api/v1/candidate_contests/read' -H Content-Type:application/json
+
+        curl -d '{"object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015"}' 'http://localhost:3000/api/v1/ballot_measure_contests/read' -H Content-Type:application/json
 
 All contests: 
 

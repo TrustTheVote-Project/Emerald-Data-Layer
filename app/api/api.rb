@@ -108,6 +108,10 @@ class API < Grape::API
 		def error_already_attached(parent, child)
 			error!(child + ' is already attached to ' + parent, 400)
 		end
+
+		def error_wrong_format(type, value)
+			error!(value + ' is not a valid type of ' + type, 400)
+		end
 		# error for if object ID exists, but is not the right type of object for what is expected?
 
 		# error for empty list of items in database?
@@ -198,11 +202,11 @@ class API < Grape::API
 		end
 
 		def election_id(scope_ocdid, date_month, date_day, date_year)
-			scope_ocdid + "-" + date_month.to_s + "/" + date_day.to_s + "/" + date_year.to_s
+			"election:" + scope_ocdid + "-" + date_month.to_s + "/" + date_day.to_s + "/" + date_year.to_s
 		end
 
-		def candidate_contest_id(name, scope_ocdid, date_month, date_day, date_year)
-			name + "-" + election_id(scope_ocdid, date_month, date_day, date_year)
+		def contest_id(name, scope_ocdid, date_month, date_day, date_year)
+			"contest:" + name + "-" + election_id(scope_ocdid, date_month, date_day, date_year)
 		end
 	end
 
@@ -504,6 +508,7 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :spatial_format, allow_blank: false, desc: "Spatial extent format, must be from geospatialformat enum"
 			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 		end
 		post :create do
@@ -516,9 +521,14 @@ class API < Grape::API
 				error_already_exists(params[:ocdid])
 			end
 
+			# only allow KML at this time
+			if Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]) != Vssc::Enum::GeoSpatialFormat.find("kml")
+				error_wrong_format("geospatialformat", Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]).to_s)
+			end
+
 			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
 
-			sd = Vssc::SpatialExtent.new(format: Vssc::Enum::GeoSpatialFormat.find("kml").to_s, coordinates: params[:spatialextent])
+			sd = Vssc::SpatialExtent.new(format: Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]).to_s, coordinates: params[:spatialextent])
 
 			s = Vssc::SpatialDimension.new(spatial_extent: sd)
 
@@ -539,6 +549,7 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :spatial_format, allow_blank: false, desc: "Spatial extent format, must be from geospatialformat enum"
 			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 		end
 		post :create_split do
@@ -549,6 +560,11 @@ class API < Grape::API
 			# error if object already exists			
 			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
 				error_already_exists(params[:ocdid])
+			end
+
+			# only allow KML at this time
+			if Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]) != Vssc::Enum::GeoSpatialFormat.find("kml")
+				error_wrong_format("geospatialformat", Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]).to_s)
 			end
 
 			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
@@ -574,6 +590,7 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
 			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :spatial_format, allow_blank: false, desc: "Spatial extent format, must be from geospatialformat enum"
 			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 		end
 		post :create_combined do
@@ -584,6 +601,11 @@ class API < Grape::API
 			# error if object already exists			
 			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
 				error_already_exists(params[:ocdid])
+			end
+
+			# only allow KML at this time
+			if Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]) != Vssc::Enum::GeoSpatialFormat.find("kml")
+				error_wrong_format("geospatialformat", Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]).to_s)
 			end
 
 			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
@@ -779,6 +801,7 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :spatial_format, allow_blank: false, desc: "Spatial extent format, must be from geospatialformat enum"
 			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
 			# district subtype?
 		end
@@ -789,6 +812,11 @@ class API < Grape::API
 
 			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
 				error_already_exists(params[:ocdid])
+			end
+
+			# only allow KML at this time
+			if Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]) != Vssc::Enum::GeoSpatialFormat.find("kml")
+				error_wrong_format("geospatialformat", Vssc::Enum::GeoSpatialFormat.find(params[:spatial_format]).to_s)
 			end
 
 			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
@@ -914,7 +942,6 @@ class API < Grape::API
 			end
 		end
 
-		# How?
 		desc "Detach a precinct from a district"
 		params do
 			requires :ocdid, type: String, allow_blank: false
@@ -1108,39 +1135,109 @@ class API < Grape::API
 		post :list_contests do
 			validate_ocdid(params[:election_scope_ocdid])
 
-			#e = Vssc::Election.where(id: params[:election_id]).first
-			#if e.nil?
-			#	status 400
-			#	return error_not_found(params[:election_id])
-			#end
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 404
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
+			end
 
-			# confirm OCDID exists and is a candidate contest
-			#cc = e.contests.find_by_object_id(params[:ocdid])
+			return e.contests.collect do |e|
+				{
+					id: e.id,
+					object_id: e.object_id
+				}
+			end
+		end
 
-			# temporary until elections work
+		desc "List candidate contests in an election"
+		params do
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+		end
+		post :list_candidate_contests do
+			validate_ocdid(params[:election_scope_ocdid])
 
 			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
 			if e.nil?
 				status 404
 				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
-			#return e.contests
-			return e.contests.collect do |e|
+
+			r = []
+			
+			# For whatever reason this returns some ballotmeasure contests even though it's
+			# only searching through candidate contests.
+			#e.contests.collect do |s|
+			#	if !Vssc::CandidateContest.where(object_id: s.object_id).nil?
+			#		r << s
+			#		return r
+			#	end
+			#end
+
+			# ballot measure does not have the votes_allowed field
+			e.contests.collect do |s|
+				if s.votes_allowed != nil
+					r << s
+				end
+			end
+			return r.collect do |cc|
 				{
-					id: e.id,
-					#name: e.name,
-					object_id: e.object_id
+					id: cc.id,
+					object_id: cc.object_id
+				}
+			end
+		end
+
+		desc "List ballot measure contests in an election"
+		params do
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+		end
+		post :list_ballot_measure_contests do
+			validate_ocdid(params[:election_scope_ocdid])
+
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 404
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
+			end
+
+			r = []
+			
+			# For whatever reason this returns all contests even though it's
+			# only searching through ballot measure contests.
+			#e.contests.collect do |s|
+			#	if !Vssc::BallotMeasureContest.where(object_id: s.object_id).nil?
+			#		r << s
+			#	end
+			#end
+
+			# ballot measure does not have the votes_allowed field
+			e.contests.collect do |s|
+				if s.votes_allowed == nil
+					r << s
+				end
+			end
+			return r.collect do |cc|
+				{
+					id: cc.id,
+					object_id: cc.object_id
 				}
 			end
 		end
 	end
 
 	resource :candidate_contests do
-		desc "List all candidate contests under an election"
-		params do
-			requires :election_id, type: String, allow_blank: false
-		end
-		post do
+		desc "List all candidate contests"
+		#params do
+		#	requires :election_id, type: String, allow_blank: false
+		#end
+		#post do
+		get do
 			status 200
 			return Vssc::CandidateContest.limit(10).collect do |cc|
 				{
@@ -1174,7 +1271,7 @@ class API < Grape::API
 			validate_ocdid(params[:election_scope_ocdid])
 			validate_ocdid(params[:jurisdiction_scope_ocdid])
 
-			obj_id = candidate_contest_id(params[:name], params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year])
+			obj_id = contest_id(params[:name], params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year])
 
 			# error if object already exists			
 			if Vssc::CandidateContest.where(object_id: obj_id).count > 0
@@ -1698,29 +1795,34 @@ class API < Grape::API
 
 	resource :ballot_measure_contests do
 		desc "List all ballot measure contests"
-		params do
-			requires :election_id, type: String, allow_blank: false
-		end
-		post do
+		#params do
+		#	requires :election_id, type: String, allow_blank: false
+		#end
+		#post do
+		get do
 			status 200
 			return Vssc::BallotMeasureContest.limit(10).collect do |cc|
 				{
 					id: cc.id,
-					ocdid: cc.object_id
+					object_id: cc.object_id
 				}
 			end
 		end
 
 		desc "Create ballot measure contest"
 		params do
-			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
-			requires :election_id, type: String, allow_blank: false, desc: "ocdid of election the contest is under."
-			requires :scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
+			# election specification
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
 
+			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Sales Tax\""
+			requires :jurisdiction_scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
 			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
-			requires :ballot_measure_type, type: Integer # integer as position in enum in schema
+			requires :ballot_measure_type, type: String, allow_blank: false, desc: "required to be from ballotmeasuretype enum"
 			requires :sequence_order, type: Integer, allow_blank: false
 
 			requires :pro_statement, type: String
@@ -1731,7 +1833,7 @@ class API < Grape::API
 			requires :effect_of_abstain, type: String
 		end
 		post :create do
-			validate_ocdid(params[:scope_ocdid])
+			validate_ocdid(params[:jurisdiction_scope_ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
 			validate_string_name(params[:ballot_title])
@@ -1745,16 +1847,24 @@ class API < Grape::API
 			validate_string_text(params[:effect_of_abstain])
 			# create the ballot measure contest
 
+			obj_id = contest_id(params[:name], params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year])
+
 			# error if object already exists			
-			if Vssc::BallotMeasureContest.where(object_id: params[:ocdid]).count > 0
-				error_already_exists(params[:ocdid])
+			if Vssc::BallotMeasureContest.where(object_id: obj_id).count > 0
+				#error_already_exists(obj_id)
+			end
+
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 404
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 
 			# verify scope ocdid exists
-			s = Vssc::ReportingUnit.find_by_object_id(params[:scope_ocdid])
+			s = Vssc::ReportingUnit.find_by_object_id(params[:jurisdiction_scope_ocdid])
 			if s.nil?
 				status 400
-				error_not_found(params[:scope_ocdid])
+				error_not_found(params[:jurisdiction_scope_ocdid])
 			end
 
 			title = Vssc::InternationalizedText.new()
@@ -1775,14 +1885,14 @@ class API < Grape::API
 			abstain = Vssc::InternationalizedText.new()
 			abstain.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:effect_of_abstain])
 
-			#test = Vssc::BallotMeasureContest.new()
-			#return test
-
 			# ballot title and ballot sub title should not be ID fields
-			cc = Vssc::BallotMeasureContest.new(object_id: params[:ocdid], name: params[:name], abbreviation: params[:abbreviation], 
-				ballot_title_id: title, ballot_sub_title_id: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:scope_ocdid], 
-				ballot_measure_type: get_enum_by_index(Vssc::Enum::BallotMeasureType, params[:ballot_measure_type], "ballotmeasuretype"),
-				pro_statement_id: pro, con_statement_id: con, passage_threshold_id: threshold, full_text_id: fulltext, summary_text: summary, effect_of_abstain_id: abstain)
+			cc = Vssc::BallotMeasureContest.new(object_id: obj_id, name: params[:name], abbreviation: params[:abbreviation], 
+				ballot_title: title, ballot_sub_title: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:jurisdiction_scope_ocdid], 
+				ballot_measure_type: Vssc::Enum::BallotMeasureType.find(params[:ballot_measure_type]),
+				pro_statement: pro, con_statement: con, passage_threshold: threshold, full_text: fulltext, summary_text: summary, effect_of_abstain: abstain)
+
+			e.contests << cc
+			return e.contests
 
 			if cc.save
 				status 200
@@ -1795,11 +1905,10 @@ class API < Grape::API
 
 		desc "List detail of a ballot measure contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
+			#requires :election_id, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:ocdid])
 			#e = Vssc::Election.where(id: params[:election_id]).first
 			#if e.nil?
 			#	status 400
@@ -1810,7 +1919,7 @@ class API < Grape::API
 			#cc = e.contests.find_by_object_id(params[:ocdid])
 
 			# temporary until elections work
-			cc = Vssc::BallotMeasureContest.find_by_object_id(params[:ocdid])
+			cc = Vssc::BallotMeasureContest.find_by_object_id(params[:object_id])
 			if cc
 				status 200
 				return cc
@@ -1959,7 +2068,7 @@ class API < Grape::API
 			return Vssc::Contest.limit(10).collect do |cc|
 				{
 					id: cc.id,
-					ocdid: cc.object_id
+					object_id: cc.object_id
 				}
 			end
 		end
