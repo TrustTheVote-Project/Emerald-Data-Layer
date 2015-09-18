@@ -131,6 +131,8 @@ Elections (WIP):
 
     Create election:
         curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
+    Create election:
+        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "end_date_month": "11", "end_date_day": "6", "end_date_year": "2015", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
 
     Get all elections:
 

@@ -210,8 +210,6 @@ class API < Grape::API
 		end
 	end
 
-
-	# Jurisdiction methods
 	resource :jurisdictions do
 
 		desc "List jurisdictions"
@@ -432,7 +430,6 @@ class API < Grape::API
 		end
 	end
 
-	# Precinct methods
 	resources :precincts do
 		desc "List all precincts"
 		get do
@@ -760,7 +757,6 @@ class API < Grape::API
 		end
 	end
 
-	# District methods
 	resource :districts do
 		desc "List all districts"
 		get do
@@ -1032,6 +1028,9 @@ class API < Grape::API
 			requires :date_month, type: Integer
 			requires :date_day, type: Integer
 			requires :date_year, type: Integer
+			requires :end_date_month, type: Integer
+			requires :end_date_day, type: Integer
+			requires :end_date_year, type: Integer
 			requires :scope_ocdid, type: String, allow_blank: false
 			requires :election_type, type: String, allow_blank: false
 			requires :name, type: String, allow_blank: false
@@ -1057,7 +1056,7 @@ class API < Grape::API
 			e = Vssc::Election.new(election_scope_identifier: params[:scope_ocdid], name: name, 
 				election_type: Vssc::Enum::ElectionType.find(params[:election_type]).to_s,
 				date: Date.new(params[:date_year], params[:date_month], params[:date_day]),
-				end_date: Date.new(params[:date_year], params[:date_month], params[:date_day]))
+				end_date: Date.new(params[:end_date_year], params[:end_date_month], params[:end_date_day]))
 
 			if e.save
 				status 200
