@@ -712,7 +712,8 @@ class API < Grape::API
 				error_already_exists(params[:ocdid])
 			end
 
-			d = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], is_electoral_district: true)
+			d = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], is_electoral_district: true, 
+				reporting_unit_type: Vssc::Enum::ReportingUnitType.find("other").to_s)
 			
 			if d.save
 				status 200
@@ -901,9 +902,9 @@ class API < Grape::API
 			requires :date_month, type: Integer
 			requires :date_day, type: Integer
 			requires :date_year, type: Integer
-			requires :election_type, type: Integer
-			requires :name, type: String, allow_blank: false
 			requires :scope_ocdid, type: String, allow_blank: false
+			requires :election_type, type: String, allow_blank: false
+			requires :name, type: String, allow_blank: false
 		end
 		post :create do
 			validate_string_name(params[:name])
@@ -916,13 +917,15 @@ class API < Grape::API
 				return error_not_found(params[:scope_ocdid])
 			end
 
-			# Language for internationalized name?
+			if Vssc::Election.where(election_scope_identifier: params[:scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).count > 0
+				error_already_exists(params[:scope_ocdid] + " " + params[:date_month].to_s + "/" + params[:date_day].to_s + "/" + params[:date_year].to_s)
+			end
+
 			name = Vssc::InternationalizedText.new()
 			name.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
 
-			# Asks for countstatus for some reason?
 			e = Vssc::Election.new(election_scope_identifier: params[:scope_ocdid], name: name, 
-				election_type: get_enum_by_index(Vssc::Enum::ElectionType, params[:election_type], "electiontype"),
+				election_type: Vssc::Enum::ElectionType.find(params[:election_type]).to_s,
 				date: Date.new(params[:date_year], params[:date_month], params[:date_day]),
 				end_date: Date.new(params[:date_year], params[:date_month], params[:date_day]))
 
@@ -937,18 +940,21 @@ class API < Grape::API
 
 		desc "Detail one election"
 		params do
-			requires :id, type: String, allow_blank: false
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :scope_ocdid, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:ocdid])
-			e = Vssc::Election.find_by_object_id(params[:id])
+			validate_ocdid(params[:scope_ocdid])
+			e = Vssc::Election.where(election_scope_identifier: params[:scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
 			if e
 				status 200
 				return e
 			else
 				# error if object does not exist
 				status 404
-				error_not_found(params[:id])
+				error_not_found(params[:scope_ocdid] + " " + params[:date_month].to_s + "/" + params[:date_day].to_s + "/" + params[:date_year].to_s)
 			end
 		end
 
