@@ -130,11 +130,15 @@ Jurisdictions:
 Elections (WIP):
 
     Create election:
-        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "November Primary", "election_type": "primary", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
+        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
 
     Get all elections:
 
         curl 'http://localhost:3000/api/v1/elections'
+
+    Get all elections under congressional district 35: 
+
+        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/elections' -H Content-Type:application/json
 
     Read: 
 
@@ -143,6 +147,10 @@ Elections (WIP):
     Update election:
 
         curl -d '{"id": "1", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "name": "November Primary", "election_type": "4", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/update' -H Content-Type:application/json
+
+    List contests in election:
+
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995"}' 'http://localhost:3000/api/v1/elections/list_contests' -H Content-Type:application/json
 
 Parties:
 
@@ -202,11 +210,11 @@ Candidate Contest:
 
     Create candidate contest:
 
-        curl -d '{"ocdid": "contest:tx-congressional-35/ocd-division/country:us/state:tx/cd:35", "election_id": "congressional-35", "name": "Texas Congressional Representative, District 35", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "0", "sequence_order": "0"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995", "name": "Texas Congressional Representative, District 35", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "1ofm", "sequence_order": "0", "votes_allowed":"1"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
 
     Read detail on it:
 
-        curl -d '{"election_id": "congressional-35", "ocdid": "contest:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/read' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "16", "date_year": "1995", "object_id": "Texas Congressional Representative, District 35-ocd-division/country:us/state:tx/cd:35-11/16/1995"}' 'http://localhost:3000/api/v1/candidate_contests/read' -H Content-Type:application/json
 
     List all candidate contests:
 

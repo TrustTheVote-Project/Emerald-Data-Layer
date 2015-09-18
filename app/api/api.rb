@@ -196,6 +196,14 @@ class API < Grape::API
 				error_enum_range(descstring, index)
 			end
 		end
+
+		def election_id(scope_ocdid, date_month, date_day, date_year)
+			scope_ocdid + "-" + date_month.to_s + "/" + date_day.to_s + "/" + date_year.to_s
+		end
+
+		def candidate_contest_id(name, scope_ocdid, date_month, date_day, date_year)
+			name + "-" + election_id(scope_ocdid, date_month, date_day, date_year)
+		end
 	end
 
 
@@ -960,28 +968,34 @@ class API < Grape::API
 			return Vssc::Election.limit(10).collect do |e|
 				{
 					id: e.id,
-					name: e.name
+					#name: e.name,
+					scope_ocdid: e.election_scope_identifier,
+					date_month: e.date.mon,
+					date_day: e.date.mday,
+					date_year: e.date.year
 				}
 			end
 		end
 
 		desc "List all elections under a certain scope"
 		params do
-			requires :jurisdiction_ocdid, type: String, allow_blank: false
+			requires :scope_ocdid, type: String, allow_blank: false
 		end
 		post do
-			validate_ocdid(params[:jurisdiction_ocdid])
-			# list elections under given jurisdiction
-			j = Vssc::GpUnit.find_by_object_id(params[:jurisdiction_ocdid])
-			if j.nil?
-				status 400
-				return error_not_found(params[:jurisdiction_ocdid])
+			validate_ocdid(params[:scope_ocdid])
+			# list elections under given scope
+			s = Vssc::GpUnit.find_by_object_id(params[:scope_ocdid])
+			if s.nil?
+				return error_not_found(params[:scope_ocdid])
 			end
 			status 200
-			return Vssc::Election.where(election_scope_identifier: params[:jurisdiction_ocdid]).collect do |e|
+			return Vssc::Election.where(election_scope_identifier: params[:scope_ocdid]).collect do |e|
 				{
 					id: e.id,
-					name: e.name
+					#name: e.name,
+					date_month: e.date.mon,
+					date_day: e.date.mday,
+					date_year: e.date.year
 				}
 			end
 		end
@@ -1083,6 +1097,42 @@ class API < Grape::API
 				end
 			end
 		end
+
+		desc "List contests in an election"
+		params do
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+		end
+		post :list_contests do
+			validate_ocdid(params[:election_scope_ocdid])
+
+			#e = Vssc::Election.where(id: params[:election_id]).first
+			#if e.nil?
+			#	status 400
+			#	return error_not_found(params[:election_id])
+			#end
+
+			# confirm OCDID exists and is a candidate contest
+			#cc = e.contests.find_by_object_id(params[:ocdid])
+
+			# temporary until elections work
+
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 404
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
+			end
+			#return e.contests
+			return e.contests.collect do |e|
+				{
+					id: e.id,
+					#name: e.name,
+					object_id: e.object_id
+				}
+			end
+		end
 	end
 
 	resource :candidate_contests do
@@ -1095,39 +1145,52 @@ class API < Grape::API
 			return Vssc::CandidateContest.limit(10).collect do |cc|
 				{
 					id: cc.id,
-					ocdid: cc.object_id
+					object_id: cc.object_id
 				}
 			end
 		end
 
 		desc "Create candidate contest"
 		params do
+			# election specification
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+
 			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
-			requires :ocdid, type: String, allow_blank: false, desc: "OCDID of contest being created"
-			requires :election_id, type: String, allow_blank: false, desc: "id of election the contest is under."
-			requires :scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
+			requires :jurisdiction_scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
 			requires :abbreviation, type: String, desc: "Abbreviation for contest." # required but can be empty
 			requires :ballot_title, type: String, allow_blank: false
 			requires :ballot_subtitle, type: String, allow_blank: false
-			requires :vote_variation_type, type: Integer, desc: "Integer as position in enum in schema"
+			requires :vote_variation_type, type: String, allow_blank: false, desc: "Vote variation type, must match from votevariationtype enum"
 			requires :sequence_order, type: Integer, allow_blank: false
+			requires :votes_allowed, type: Integer, allow_blank: false
 		end
 		post :create do
 			validate_string_name(params[:name])
 			validate_string_name(params[:ballot_title])
 			validate_string_name(params[:ballot_subtitle])
-			validate_ocdid(params[:ocdid])
-			validate_ocdid(params[:scope_ocdid])
+			validate_ocdid(params[:election_scope_ocdid])
+			validate_ocdid(params[:jurisdiction_scope_ocdid])
+
+			obj_id = candidate_contest_id(params[:name], params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year])
 
 			# error if object already exists			
-			if Vssc::CandidateContest.where(object_id: params[:ocdid]).count > 0
-				error_already_exists(params[:ocdid])
+			if Vssc::CandidateContest.where(object_id: obj_id).count > 0
+				error_already_exists(obj_id)
+			end
+
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 404
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 
 			# verify scope ocdid exists
-			s = Vssc::ReportingUnit.find_by_object_id(params[:scope_ocdid])
+			s = Vssc::ReportingUnit.find_by_object_id(params[:jurisdiction_scope_ocdid])
 			if s.nil?
-				status 400
+				status 404
 				error_not_found(params[:scope_ocdid])
 			end
 
@@ -1136,14 +1199,20 @@ class API < Grape::API
 			subtitle = Vssc::InternationalizedText.new()
 			subtitle.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:ballot_subtitle])
 
-			# ballot title and ballot sub title should not be ID fields
-			cc = Vssc::CandidateContest.new(object_id: params[:ocdid], name: params[:name], abbreviation: params[:abbreviation], 
-				ballot_title: title, ballot_sub_title: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:scope_ocdid], 
-				vote_variation_type: get_enum_by_index(Vssc::Enum::VoteVariationType, params[:vote_variation_type], "votevariationtype"))
+			cc = Vssc::CandidateContest.new(object_id: obj_id, name: params[:name], abbreviation: params[:abbreviation], 
+				ballot_title: title, ballot_sub_title: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:jurisdiction_scope_ocdid], 
+				vote_variation_type: Vssc::Enum::VoteVariationType.find(params[:vote_variation_type]), votes_allowed: params[:votes_allowed])
+
+			# attach contest to election
+			e.contests << cc
 
 			if cc.save
-				status 200
-				return cc
+				if e.save
+					return cc
+				else
+					status 500
+					return e.errors
+				end
 			else
 				status 500
 				return cc.errors
@@ -1152,31 +1221,31 @@ class API < Grape::API
 
 		desc "List detail of a candidate contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
+			# Require election info? Theoretically we could just search all elections for object ID
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+
+			requires :object_id, type: String, allow_blank: false, desc: "Object id of contest"
 		end
 		post :read do
-			validate_ocdid(params[:ocdid])
-			validate_ocdid(params[:election_id])
+			validate_ocdid(params[:election_scope_ocdid])
 
-			#e = Vssc::Election.where(id: params[:election_id]).first
-			#if e.nil?
-			#	status 400
-			#	return error_not_found(params[:election_id])
-			#end
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 404
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
+			end
 
-			# confirm OCDID exists and is a candidate contest
-			#cc = e.contests.find_by_object_id(params[:ocdid])
-
-			# temporary until elections work
-			cc = Vssc::CandidateContest.find_by_object_id(params[:ocdid])
+			cc = e.contests.find_by_object_id(params[:object_id])
 			if cc
 				status 200
 				return cc
 			else
 				# error if object does not exist
 				status 404
-				error_not_found(params[:ocdid])
+				error_not_found(params[:object_id])
 			end
 		end
 
