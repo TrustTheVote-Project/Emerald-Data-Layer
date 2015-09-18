@@ -1559,12 +1559,12 @@ class API < Grape::API
 			requires :ballot_measure_type, type: Integer # integer as position in enum in schema
 			requires :sequence_order, type: Integer, allow_blank: false
 
-			requires :pro_statement, type: String, allow_blank: false
-			requires :con_statement, type: String, allow_blank: false
-			requires :passage_threshold, type: String, allow_blank: false
-			requires :full_text, type: String, allow_blank: false
+			requires :pro_statement, type: String
+			requires :con_statement, type: String
+			requires :passage_threshold, type: String
+			requires :full_text, type: String
 			requires :summary_text, type: String, allow_blank: false
-			requires :effect_of_abstain, type: String, allow_blank: false
+			requires :effect_of_abstain, type: String
 		end
 		post :create do
 			validate_ocdid(params[:scope_ocdid])
@@ -1858,11 +1858,11 @@ class API < Grape::API
 
 			# Contact info portion
 			requires :address_line, type: String, allow_blank: false
-			requires :email, type: String, allow_blank: false
-			requires :fax, type: String, allow_blank: false
+			requires :email, type: String
+			requires :fax, type: String
 			requires :contact_name, type: String, allow_blank: false
-			requires :phone, type: String, allow_blank: false
-			requires :uri, type: String, allow_blank: false
+			requires :phone, type: String
+			requires :uri, type: String
 			# schedule here somehow
 
 			# Term portion
