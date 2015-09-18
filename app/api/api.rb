@@ -205,14 +205,11 @@ class API < Grape::API
 		desc "List jurisdictions"
 		get do
 			# return list of all jurisdictions
-			j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
-			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
-			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
-
-			j.collect do |p|
+			Vssc::ReportingUnit.limit(10).collect do |p|
 				{
 					id: p.id,
-					ocdid: p.object_id
+					ocdid: p.object_id,
+					type: p.reporting_unit_type
 				}
 			end
 		end
@@ -223,11 +220,8 @@ class API < Grape::API
 		end
 		post :list_districts do
 			validate_ocdid(params[:ocdid])
-			j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
-			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
-			j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
 
-      		u = j.find_by_object_id(params[:ocdid])
+			u = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
 			if u
 				status 200
 				return u.composing_gp_units.where(is_electoral_district: true).collect do |p|
@@ -249,12 +243,6 @@ class API < Grape::API
 		end
 		post :list_subunits do
 			validate_ocdid(params[:ocdid])
-
-			#j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
-			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
-			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
-
-      		#u = j.find_by_object_id(params[:ocdid])
 
       		u = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
 
@@ -278,7 +266,7 @@ class API < Grape::API
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
 			#requires :elorg_name, type: String
-			requires :unit_type, type: Integer, desc: "Enum index of reporting unit type"
+			requires :unit_type, type: String, desc: "Reporting unit type, must be a member of reporting_unit_type enum"
 		end
 		post :create do
 			validate_string_name(params[:name])
@@ -288,8 +276,12 @@ class API < Grape::API
 				error_already_exists(params[:ocdid])
 			end
 
+			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
+
 			j = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], 
-				reporting_unit_type: get_enum_by_index(Vssc::Enum::ReportingUnitType, params[:unit_type], "jurisdiction"))
+				reporting_unit_type: Vssc::Enum::ReportingUnitType.find(params[:unit_type]).to_s)
+
+			j.codes << c
 			
 			if j.save
 				status 200
@@ -315,10 +307,6 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-
-			#j = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("national").to_s)
-			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("state").to_s)
-			#j += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("county").to_s)
 
       		p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
 			if p
@@ -437,10 +425,15 @@ class API < Grape::API
 		desc "List all precincts"
 		get do
 			# list precints
-			return Vssc::ReportingUnit.limit(10).where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).collect do |p|
+			s = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s)
+			s += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("splitprecinct").to_s)
+			s += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("combinedprecinct").to_s)
+			#return Vssc::ReportingUnit.limit(10).where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).collect do |p|
+			return s.collect do |p|
 				{
-					id: p.id,
-					ocdid: p.object_id
+					#id: p.id,
+					ocdid: p.object_id,
+					type: p.reporting_unit_type
 				}
 			end
 		end
@@ -515,7 +508,85 @@ class API < Grape::API
 				error_already_exists(params[:ocdid])
 			end
 
-			p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct"))
+			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
+
+			sd = Vssc::SpatialExtent.new(format: Vssc::Enum::GeoSpatialFormat.find("kml").to_s, coordinates: params[:spatialextent])
+
+			s = Vssc::SpatialDimension.new(spatial_extent: sd)
+
+			p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct"), spatial_dimension: s)
+
+			p.codes << c
+
+			if p.save
+				status 200
+				return p
+			else
+				status 500
+				return p.errors
+			end
+		end
+
+		desc "Create split precinct"
+		params do
+			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
+		end
+		post :create_split do
+			validate_ocdid(params[:ocdid])
+			validate_kml(params[:spatialextent])
+			validate_string_name(params[:name])
+
+			# error if object already exists			
+			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
+			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
+
+			sd = Vssc::SpatialExtent.new(format: Vssc::Enum::GeoSpatialFormat.find("kml").to_s, coordinates: params[:spatialextent])
+
+			s = Vssc::SpatialDimension.new(spatial_extent: sd)
+
+			p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], reporting_unit_type: Vssc::Enum::ReportingUnitType.find("splitprecinct"), spatial_dimension: s)
+
+			p.codes << c
+
+			if p.save
+				status 200
+				return p
+			else
+				status 500
+				return p.errors
+			end
+		end
+
+		desc "Create combined precinct"
+		params do
+			requires :ocdid, type: String, allow_blank: false, desc: "ocdid of precinct."
+			requires :spatialextent, allow_blank: false, desc: "Spatial definition file, kml format."
+			requires :name, type: String, allow_blank: false, desc: "Name of precinct."
+		end
+		post :create_combined do
+			validate_ocdid(params[:ocdid])
+			validate_kml(params[:spatialextent])
+			validate_string_name(params[:name])
+
+			# error if object already exists			
+			if Vssc::ReportingUnit.where(object_id: params[:ocdid]).count > 0
+				error_already_exists(params[:ocdid])
+			end
+
+			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
+
+			sd = Vssc::SpatialExtent.new(format: Vssc::Enum::GeoSpatialFormat.find("kml").to_s, coordinates: params[:spatialextent])
+
+			s = Vssc::SpatialDimension.new(spatial_extent: sd)
+
+			p = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], reporting_unit_type: Vssc::Enum::ReportingUnitType.find("combinedprecinct"), spatial_dimension: s)
+
+			p.codes << c
 
 			if p.save
 				status 200
@@ -712,8 +783,16 @@ class API < Grape::API
 				error_already_exists(params[:ocdid])
 			end
 
+			c = Vssc::Code.new(value: params[:ocdid], code_type: Vssc::Enum::CodeType.find("ocdid").to_s)
+
+			sd = Vssc::SpatialExtent.new(format: Vssc::Enum::GeoSpatialFormat.find("kml").to_s, coordinates: params[:spatialextent])
+
+			s = Vssc::SpatialDimension.new(spatial_extent: sd)
+
 			d = Vssc::ReportingUnit.new(object_id: params[:ocdid], name: params[:name], is_electoral_district: true, 
-				reporting_unit_type: Vssc::Enum::ReportingUnitType.find("other").to_s)
+				reporting_unit_type: Vssc::Enum::ReportingUnitType.find("other").to_s, spatial_dimension: s)
+
+			d.codes << c
 			
 			if d.save
 				status 200
@@ -795,7 +874,17 @@ class API < Grape::API
 			end
 
 			# confirm precinct OCDID exists and is a precinct
-			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:precinct_ocdid])
+			ps = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s)
+			ps += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("splitprecinct").to_s)
+			ps += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("combinedprecinct").to_s)
+			p = nil
+			ps.collect do |r|
+				if r.object_id = params[:precinct_ocdid]
+					p = r
+					break
+				end
+			end
+			#p = ps.where(object_id: params[:precinct_ocdid]).first
 			if p.nil?
 				status 400
 				return error_not_found(params[:precinct_ocdid])
@@ -1049,7 +1138,7 @@ class API < Grape::API
 
 			# ballot title and ballot sub title should not be ID fields
 			cc = Vssc::CandidateContest.new(object_id: params[:ocdid], name: params[:name], abbreviation: params[:abbreviation], 
-				ballot_title_id: title, ballot_sub_title_id: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:scope_ocdid], 
+				ballot_title: title, ballot_sub_title: subtitle, sequence_order: params[:sequence_order], jurisdictional_scope_identifier: params[:scope_ocdid], 
 				vote_variation_type: get_enum_by_index(Vssc::Enum::VoteVariationType, params[:vote_variation_type], "votevariationtype"))
 
 			if cc.save

@@ -8,13 +8,17 @@ Make sure your database is set up and the app is running
 
 Precincts:
 
-    Create Precint 101
+    Create Precint 101 (parent of split precincts)
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101"}' 'http://localhost:3000/api/v1/precincts/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101"}' 'http://localhost:3000/api/v1/precincts/create_combined' -H Content-Type:application/json
 
     Create Precinct 102
       
         curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:102", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 102"}' 'http://localhost:3000/api/v1/precincts/create' -H Content-Type:application/json
+
+        With passing actual KML file:
+
+        curl -F "ocdid=ocd-division/country:us/state:ma/county:travis/precinct:102" -F "spatialextent=@./testkml.kml" -F "name=Precinct 102" http://localhost:3000/api/v1/precincts/create
 
     Rename Precinct 102
 
@@ -24,16 +28,15 @@ Precincts:
 
         curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:102"}' 'http://localhost:3000/api/v1/precincts/read' -H Content-Type:application/json
 
-
     Show all Precincts (2)
 
         curl 'http://localhost:3000/api/v1/precincts'
 
     Create Split Precincts: (101-A and 101-B)
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-A", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-A"}' 'http://localhost:3000/api/v1/precincts/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-A", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-A"}' 'http://localhost:3000/api/v1/precincts/create_split' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-B", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-B"}' 'http://localhost:3000/api/v1/precincts/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:ma/county:travis/precinct:101-B", "spatialextent": {"filename": "myfile.kml"}, "name": "Precinct 101-B"}' 'http://localhost:3000/api/v1/precincts/create_split' -H Content-Type:application/json
 
 
     Attach 101-A to Precinct 101
@@ -88,7 +91,7 @@ Jurisdictions:
 
     Create Texas jurisdiction:
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:tx", "name": "State of Texas", "unit_type": "16"}' 'http://localhost:3000/api/v1/jurisdictions/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:tx", "name": "State of Texas", "unit_type": "state"}' 'http://localhost:3000/api/v1/jurisdictions/create' -H Content-Type:application/json
 
     Update Texas jurisdiction: 
 
@@ -100,7 +103,7 @@ Jurisdictions:
 
     Create Travis County TX jurisdiction:
 
-        curl -d '{"ocdid": "ocd-division/country:us/state:tx/county:travis", "name": "Travis County", "unit_type": "5"}' 'http://localhost:3000/api/v1/jurisdictions/create' -H Content-Type:application/json
+        curl -d '{"ocdid": "ocd-division/country:us/state:tx/county:travis", "name": "Travis County", "unit_type": "county"}' 'http://localhost:3000/api/v1/jurisdictions/create' -H Content-Type:application/json
 
     Attach Travis County TX to parent Texas
 
