@@ -216,6 +216,10 @@ class API < Grape::API
 		def person_id(name)
 			"person:" + name
 		end
+
+		def party_id(name)
+			"party:" + name
+		end
 	end
 
 	resource :jurisdictions do
@@ -1325,7 +1329,7 @@ class API < Grape::API
 
 		desc "List detail of a candidate contest"
 		params do
-			# Require election info? Theoretically we could just search all elections for object ID
+			# Require election info? Theoretically we could just search all candidate contests for object ID
 			requires :date_month, type: Integer
 			requires :date_day, type: Integer
 			requires :date_year, type: Integer
@@ -1776,36 +1780,38 @@ class API < Grape::API
 			return Vssc::Party.limit(10).collect do |p|
 				{
 					id: p.id,
-					ocdid: p.object_id
+					object_id: p.object_id
 				}
 			end
 		end
 
 		desc "Create a new party"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			#requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String, allow_blank: false
 			requires :color, type: String, desc: "HTML color string of party."
 			requires :abbreviation, type: String, allow_blank: false
 		end
 		post :create do
-			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
 
+			obj_id = party_id(params[:name])
+
 			# error if object already exists			
-			if Vssc::Party.where(object_id: params[:ocdid]).count > 0
-				error_already_exists(params[:ocdid])
+			if Vssc::Party.where(object_id: obj_id).count > 0
+				error_already_exists(obj_id)
 			end
 
 			name = Vssc::InternationalizedText.new()
 			name.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
 
-			p = Vssc::Party.new(object_id: params[:ocdid], name: name, color: params[:color], abbreviation: params[:abbreviation])
+			p = Vssc::Party.new(object_id: obj_id, name: name, color: params[:color], abbreviation: params[:abbreviation])
 
 			if p.save
 				status 200
 				return p.to_json(:include => {:name => { :include => :language_strings}})
+				#return p
 			else
 				status 500
 				return p.errors
@@ -1814,11 +1820,10 @@ class API < Grape::API
 
 		desc "Detail a party"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:ocdid])
-      		p = Vssc::Party.find_by_object_id(params[:ocdid])
+      		p = Vssc::Party.find_by_object_id(params[:object_id])
 			if p
 				status 200
 				# Include name data
@@ -1827,28 +1832,27 @@ class API < Grape::API
 			else
 				# error if object does not exist
 				status 404
-				error_not_found(params[:ocdid])
+				error_not_found(params[:object_id])
 			end
 		end
 
 		desc "Update a party"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 			requires :name, type: String
 			requires :color, type: String, desc: "HTML color string of party."
 			requires :abbreviation, type: String
 		end
 		post :update do
-			validate_ocdid(params[:ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:abbreviation])
 			
 			# error if object does not exist
 			attributes = params.dup
-			p = Vssc::Party.find_by_object_id(attributes.delete(:ocdid))
+			p = Vssc::Party.find_by_object_id(attributes.delete(:object_id))
 			if p.nil?
 				status 400
-				error_not_found(params[:ocdid])
+				error_not_found(params[:object_id])
 			else
 				# update selected party
 				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment

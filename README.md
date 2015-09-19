@@ -162,21 +162,21 @@ Parties:
 
     Create parties: 
 
-        curl -d '{"ocdid": "party:republican/ocd-division/country:us/state:tx", "name": "Republican", "color": "#FF3333", "abbreviation": "REP"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
+        curl -d '{"name": "Republican", "color": "#FF3333", "abbreviation": "REP"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "party:democratic/ocd-division/country:us/state:tx", "name": "Democratic", "color": "#0000FF", "abbreviation": "DEM"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
+        curl -d '{"name": "Democratic", "color": "#0000FF", "abbreviation": "DEM"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "party:libertarian/ocd-division/country:us/state:tx", "name": "Libertarian", "color": "#DCB732", "abbreviation": "LIB"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
+        curl -d '{"name": "Libertarian", "color": "#DCB732", "abbreviation": "LIB"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "party:green/ocd-division/country:us/state:tx", "name": "Green", "color": "#0BDA51", "abbreviation": "GRN"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
+        curl -d '{"name": "Green", "color": "#0BDA51", "abbreviation": "GRN"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
 
     Update party: 
 
-        curl -d '{"ocdid": "party:democratic/ocd-division/country:us/state:tx", "name": "", "color": "#3333FF", "abbreviation": ""}' 'http://localhost:3000/api/v1/parties/update' -H Content-Type:application/json
+        curl -d '{"object_id": "party:Democratic", "name": "", "color": "#3333FF", "abbreviation": ""}' 'http://localhost:3000/api/v1/parties/update' -H Content-Type:application/json
 
     Detail party:
 
-        curl -d '{"ocdid": "party:democratic/ocd-division/country:us/state:tx"}' 'http://localhost:3000/api/v1/parties/read' -H Content-Type:application/json
+        curl -d '{"object_id": "party:Democratic"}' 'http://localhost:3000/api/v1/parties/read' -H Content-Type:application/json
 
     List all parties: 
 
