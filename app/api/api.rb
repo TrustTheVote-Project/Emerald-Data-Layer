@@ -208,6 +208,14 @@ class API < Grape::API
 		def contest_id(name, scope_ocdid, date_month, date_day, date_year)
 			"contest:" + name + "-" + election_id(scope_ocdid, date_month, date_day, date_year)
 		end
+
+		def candidate_id(name, scope_ocdid, date_month, date_day, date_year)
+			"candidate:" + name + "-" + election_id(scope_ocdid, date_month, date_day, date_year)
+		end
+
+		def person_id(name)
+			"person:" + name
+		end
 	end
 
 	resource :jurisdictions do
@@ -1477,11 +1485,15 @@ class API < Grape::API
 	resource :candidates do
 		desc "List all candidates in an election"
 		params do
-			requires :election_id, type: String, allow_blank: false
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
 		end
 		post do
 			# list all candidates in selected object
-			e = Vssc::Election.where(id: params[:election_id]).first
+			e = Vssc::Election.where(election_scope_identifier: params[:scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			#e = Vssc::Election.where(id: params[:election_id]).first
 			if e
 				status 200
 				return e.candidates.collect do |c|
@@ -1499,10 +1511,13 @@ class API < Grape::API
 
 		desc "Create a candidate"
 		params do
-			requires :ocdid, type: String, allow_blank: false
-			requires :election_id, type: String, allow_blank: false
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+
 			requires :ballot_name, type: String, allow_blank: false
-			requires :party_ocdid, type: String, allow_blank: false, desc: "ocdid of affiliated party."
+			requires :party_object_id, type: String, allow_blank: false, desc: "object id of affiliated party."
 
 			# 'person' subclass here
 			requires :first_name, type: String, allow_blank: false
@@ -1514,7 +1529,7 @@ class API < Grape::API
 
 		end
 		post :create do
-			validate_ocdid(params[:ocdid])
+			validate_ocdid(params[:election_scope_ocdid])
 			validate_string_name(params[:ballot_name])
 			validate_string_name(params[:first_name])
 			validate_string_name(params[:middle_name])
@@ -1523,17 +1538,30 @@ class API < Grape::API
 			validate_string_name(params[:suffix])
 			validate_string_name(params[:profession])
 
+			cand_obj_id = candidate_id(params[:ballot_name], params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year])
+			pers_obj_id = person_id(params[:ballot_name])
 
 			# error if object already exists			
-			if Vssc::Candidate.where(object_id: params[:ocdid]).count > 0
-				error_already_exists(params[:ocdid])
+			if Vssc::Candidate.where(object_id: cand_obj_id).count > 0
+				#error_already_exists(cand_obj_id)
+			end
+
+			if Vssc::Person.where(object_id: pers_obj_id).count > 0
+				#error_already_exists(pers_obj_id)
 			end
 
 			# validate that election, party IDs exist
-			p = Vssc::Party.find_by_object_id(params[:party_ocdid])
-			if p.nil?
+			party = Vssc::Party.limit(100).find_by_object_id(params[:party_object_id])
+			if party.nil?
 				status 400
-				error_not_found(params[:party_ocdid])
+				error_not_found(params[:party_object_id])
+			end
+
+
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 400
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 
 			ballotname = Vssc::InternationalizedText.new()
@@ -1542,14 +1570,20 @@ class API < Grape::API
 			profession = Vssc::InternationalizedText.new()
 			profession.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:profession])
 
-			p = Vssc::Person.new(object_id: params[:ocdid], first_name: params[:first_name], middle_names: [params[:middle_name]], 
+			p = Vssc::Person.new(object_id: pers_obj_id, first_name: params[:first_name], middle_names: [params[:middle_name]], 
 				last_name: params[:last_name], prefix: params[:prefix], sufix: params[:suffix], profession: profession, full_name: ballotname)
 
 			if p.save
-				c = Vssc::Candidate.new(object_id: params[:ocdid], ballot_name: ballotname, person_identifier: p.id, party_identifier: params[:party_ocdid])
+				c = Vssc::Candidate.new(object_id: cand_obj_id, ballot_name: ballotname, person_identifier: p.id, party_identifier: party.id)
 				if c.save
-					status 200
-					return [c,p]
+					e.candidates << c
+					if e.save
+						status 201
+						return [c,p]
+					else
+						status 500
+						return e.errors
+					end
 				else
 					status 500
 					return c.errors
@@ -1684,6 +1718,54 @@ class API < Grape::API
 					status 500
 					return c.errors
 				end
+			end
+		end
+	end
+
+	resource :people do
+		desc "Create a person"
+		params do
+			requires :first_name, type: String, allow_blank: false
+			requires :middle_name, type: String
+			requires :last_name, type: String, allow_blank: false
+			requires :prefix, type: String
+			requires :suffix, type: String
+			requires :profession, type: String, allow_blank: false
+			requires :full_name, type: String, allow_blank: false
+
+		end
+		post :create do
+			validate_string_name(params[:first_name])
+			validate_string_name(params[:middle_name])
+			validate_string_name(params[:last_name])
+			validate_string_name(params[:prefix])
+			validate_string_name(params[:suffix])
+			validate_string_name(params[:profession])
+			validate_string_name(params[:full_name])
+
+			pers_obj_id = person_id(params[:full_name])
+
+			if Vssc::Person.where(object_id: pers_obj_id).count > 0
+				#error_already_exists(pers_obj_id)
+			end
+
+			fullname = Vssc::InternationalizedText.new()
+			fullname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
+
+			profession = Vssc::InternationalizedText.new()
+			profession.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:profession])
+
+			p = Vssc::Person.new(object_id: pers_obj_id, first_name: params[:first_name], middle_names: [params[:middle_name]], 
+				last_name: params[:last_name], prefix: params[:prefix], sufix: params[:suffix], profession: profession, full_name: fullname)
+
+			#t = Vssc::Candidate.new()
+			#return t
+
+			if p.save
+				return p
+			else
+				status 500
+				return p.errors
 			end
 		end
 	end

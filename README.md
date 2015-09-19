@@ -187,17 +187,20 @@ Candidate:
     Create candidates:
 
         (incomplete)
-        curl -d '{"ocdid": "candidate:lloyd-doggett-1/", "election_id": "congressional-35", "ballot_name": "Lloyd Doggett", "party_ocdid": "party:democratic/ocd-division/country:us/state:tx", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "II", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Lloyd Doggett", "party_object_id": "party:democratic/ocd-division/country:us/state:tx", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "II", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
 
-        curl -d '{"ocdid": "candidate:susan_narvaiz-2/", "election_id": "congressional-35", "ballot_name": "Susan Narvaiz", "party_ocdid": "party:republican/ocd-division/country:us/state:tx", "first_name": "Susan", "middle_name": "Lea Clifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", ballot_name": "Susan Narvaiz", "party_object_id": "party:republican/ocd-division/country:us/state:tx", "first_name": "Susan", "middle_name": "Lea Clifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
 
     update
 
-        curl -d '{"ocdid": "candidate:lloyd-doggett-1/", "election_id": "congressional-35", "ballot_name": "Lloyd Doggett", "party_ocdid": "party:democratic/ocd-division/country:us/state:tx", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "2nd", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/update' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Lloyd Doggett", "party_ocdid": "party:democratic/ocd-division/country:us/state:tx", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "2nd", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/update' -H Content-Type:application/json
 
     detail
 
         curl -d '{"election_id": "congressional-35", "ocdid": "candidate:lloyd-doggett-1/"}' 'http://localhost:3000/api/v1/candidates/read' -H Content-Type:application/json
+
+Person
+    curl -d '{"full_name": "Susan Narvaiz", "first_name": "Susan", "middle_name": "Lea Clifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/people/create' -H Content-Type:application/json
 
 Office: 
 
