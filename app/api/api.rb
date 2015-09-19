@@ -12,51 +12,6 @@ class API < Grape::API
 	# URL for curl would be post .../api/v1/hello/greetings
 	# If just post do, then .../api/v1/hello
 
-	# OCDIDs for flintstones testing
-
-	ocd_state_slate = "ocd-division/country:us/state:slate"
-	ocd_cobblestone_county = ocd_state_slate + "/county:cobblestone"
-	ocd_bedrock = ocd_cobblestone_county + "/town:bedrock"
-	ocd_mineraldistrict = ocd_cobblestone_county + "/mineral_d:1"
-	ocd_Downtown001 = ocd_cobblestone_county + "/precinct:Downtown-001"
-	ocd_Quarrytown002 = ocd_cobblestone_county + "/precinct:Quarrytown-002"
-	ocd_QuarryCounty003 = ocd_cobblestone_county + "/precinct:QuarryCounty-003"
-	ocd_County004 = ocd_cobblestone_county + "/precinct:County-004"
-	ocd_election = "election:11-03-5000BC/" + ocd_cobblestone_county
-	ocd_contest_mayor = "contest:mayor/" + ocd_cobblestone_county
-	ocd_quarry_comm = "contest:quarry-commisioner/" + ocd_mineraldistrict
-	ocd_referendum = "question:A/" + ocd_mineraldistrict
-	ocd_candidate_fredflintstone = "candidate:fred-flintstone-1/" + ocd_contest_mayor
-	ocd_candidate_bettyrubble = "candidate:bettyrubble-2/" + ocd_contest_mayor
-	ocd_candidate_barneyrubble = "candidate:barneyrubble-3/" + ocd_quarry_comm
-	ocd_referendum_response_yes = "response:yes/question:A/ocd-division/country:us/state:st/county:cobblestone:mineral_d:1"
-	ocd_referendum_response_no = "response:no/question:A/ocd-division/country:us/state:st/county:cobblestone:mineral_d:1"
-	ocd_office_mayor = "office:mayor/" + ocd_bedrock
-	ocd_office_quarrycomm = "office:quarrycomm/" + ocd_cobblestone_county
-	ocd_party_granite = "party:granite/" + ocd_state_slate
-	ocd_party_marble = "party:marble/" + ocd_state_slate
-
-
-	data_bedrock = {:name => "City of Bedrock", :ocdid => ocd_bedrock}
-	data_cobblecounty = {:name => "Cobblestone County", :ocdid => ocd_cobblestone_county, :elorg_name => "Cobblestone County"}
-	data_mineraldistrict = {:name => "Mineral District", :ocdid => ocd_mineraldistrict}
-	data_candidate_fredflintstone = {:ballot_name => "Fred Flintstone", :ocdid => ocd_candidate_fredflintstone, :contest_id => ocd_contest_mayor, :party => ocd_party_granite}
-	data_candidate_bettyrubble = {:ballot_name => "Betty Rubble", :ocdid => ocd_candidate_bettyrubble, :contest_id => ocd_contest_mayor, :party => ocd_party_marble}
-	data_candidate_barneyrubble = {:ballot_name => "Barney Rubble", :ocdid => ocd_candidate_barneyrubble, :contest_id => ocd_contest_mayor, :party => ocd_party_marble}
-	data_referendum = {:desc => "Quarry Usage Fee", :ocdid => ocd_referendum}
-	data_referendum_response_yes = {:desc => "Yes", :ocdid => ocd_referendum_response_yes}
-	data_referendum_response_no = {:desc => "No", :ocdid => ocd_referendum_response_no}
-	data_contest_mayor = {:desc => "Bedrock Mayor", :ocdid => ocd_contest_mayor}
-	data_quarry_comm = {:desc => "Cobblestone County Commissioner", :ocdid => ocd_quarry_comm}
-	data_precinct_Downtown001 = {:ocdid => ocd_Downtown001, :name => "Downtown001"}
-	data_precinct_Quarrytown002 = {:ocdid => ocd_Quarrytown002}
-	data_precinct_QuarryCounty003 = {:ocdid => ocd_QuarryCounty003}
-	data_precinct_County004 = {:ocdid => ocd_County004}
-	data_office_mayor = {:ocdid => ocd_office_mayor}
-	data_office_quarrycomm = {:ocdid => ocd_quarry_comm}
-	data_party_granite = {:ocdid => data_party_granite}
-	data_party_marble = {:ocdid => data_party_marble}
-
 	helpers do
 
 
@@ -223,6 +178,10 @@ class API < Grape::API
 
 		def ballot_measure_selection_id(selection, contest_id)
 			"ballot_measure_selection:" + selection + "-" + contest_id
+		end
+
+		def office_id(name, scope_ocdid)
+			"office:" + name + "-" + scope_ocdid
 		end
 	end
 
@@ -1053,7 +1012,6 @@ class API < Grape::API
 		end
 		post :create do
 			validate_string_name(params[:name])
-			# create a new election
 
 			# validate whether scope OCDID is proper
 			s = Vssc::GpUnit.find_by_object_id(params[:scope_ocdid])
@@ -1075,7 +1033,7 @@ class API < Grape::API
 				end_date: Date.new(params[:end_date_year], params[:end_date_month], params[:end_date_day]))
 
 			if e.save
-				status 200
+				status 201
 				return e
 			else
 				status 500
@@ -1386,103 +1344,60 @@ class API < Grape::API
 
 		desc "Attach an office to contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-			requires :office_ocdid, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
+			requires :office_object_id, type: String, allow_blank: false
 		end
 		post :attach_office do
-			validate_ocdid(params[:ocdid])
-			validate_ocdid(params[:office_ocdid])
-
-			#e = Vssc::Election.where(id: params[:election_id]).first
-			#if e.nil?
-			#	status 400
-			#	return error_not_found(params[:election_id])
-			#end
-
-			# confirm OCDID exists and is a candidate contest
-			#cc = e.contests.find_by_object_id(params[:ocdid])
-
-			# temporary until elections work
-			cc = Vssc::CandidateContest.find_by_object_id(params[:ocdid])
+			cc = Vssc::CandidateContest.find_by_object_id(params[:contest_object_id])
 			if cc.nil?
 				status 400
-				error_not_found(params[:ocdid])
-			end
-
-			o = Vssc::Office.find_by_object_id(params[:office_ocdid])
-			if o.nil?
-				status 400
-				error_not_found(params[:office_ocdid])
+				error_not_found(params[:contest_object_id])
 			end
 
 			# make sure connection does not already exist
-			if cc.contest_office_id_refs.where(office_id_ref: params[:office_ocdid]).where(contest_id: cc.id).size > 0
-				error_already_attached(params[:ocdid], params[:office_ocdid])
+			if cc.offices.where(object_id: params[:office_object_id]).size > 0
+				error_already_attached(params[:contest_object_id], params[:office_object_id])
 			end
 
-			cor = Vssc::ContestOfficeIdRef.new(office_id_ref: params[:office_ocdid])
+			o = Vssc::Office.find_by_object_id(params[:office_object_id])
+			if o.nil?
+				status 400
+				error_not_found(params[:office_object_id])
+			end
 
-			cc.contest_office_id_refs << cor
+			cc.offices << o
 
-			if cor.save
-				if cc.save
-					status 201
-					return cor
-				else
-					status 500
-					return cc.errors
-				end
+			if cc.save
+				status 200
+				return cc.to_json(include: :offices)
 			else
 				status 500
-				return cor.errors
+				return cc.errors
 			end
 		end
 
 		desc "Detach an office from contest"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
-			requires :office_ocdid, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
+			requires :office_object_id, type: String, allow_blank: false
 		end
 		post :detach_office do
-			validate_ocdid(params[:election_id])
-			validate_ocdid(params[:ocdid])
-			validate_ocdid(params[:office_ocdid])
-
-			#e = Vssc::Election.where(id: params[:election_id]).first
-			#if e.nil?
-			#	status 400
-			#	return error_not_found(params[:election_id])
-			#end
-
-			# confirm OCDID exists and is a candidate contest
-			#cc = e.contests.find_by_object_id(params[:ocdid])
-
-			# temporary until elections work
-			cc = Vssc::CandidateContest.find_by_object_id(params[:ocdid])
+			cc = Vssc::CandidateContest.find_by_object_id(params[:contest_object_id])
 			if cc.nil?
-				status 400
-				error_not_found(params[:ocdid])
+				error_not_found(params[:contest_object_id])
 			end
 
-			o = Vssc::Office.find_by_object_id(params[:office_ocdid])
+			o = cc.offices.find_by_object_id(params[:office_object_id])
 			if o.nil?
-				status 400
-				error_not_found(params[:office_ocdid])
+				error_not_found(params[:office_object_id])
 			end
 
-			cor = cc.contest_office_id_refs.where(office_id_ref: params[:office_ocdid]).first
-			if cor.nil?
-				status 400
-				error_not_found(params[:office_ocdid])
-			end
-
-			cc.contest_office_id_refs.delete(cor)
+			# only delete association
+			cc.offices.delete(o)
 			
 			if cc.save
 				status 200
-				return cc
+				return cc.to_json(include: :offices)
 			else
 				status 500
 				return cc.errors
@@ -1499,8 +1414,9 @@ class API < Grape::API
 			requires :election_scope_ocdid, type: String, allow_blank: false
 		end
 		post do
+			validate_ocdid(params[:election_scope_ocdid])
 			# list all candidates in selected object
-			e = Vssc::Election.where(election_scope_identifier: params[:scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
 			#e = Vssc::Election.where(id: params[:election_id]).first
 			if e
 				status 200
@@ -1528,6 +1444,7 @@ class API < Grape::API
 			requires :party_object_id, type: String, allow_blank: false, desc: "object id of affiliated party."
 
 			# 'person' subclass here
+			requires :full_name, type: String, allow_blank: false
 			requires :first_name, type: String, allow_blank: false
 			requires :middle_name, type: String
 			requires :last_name, type: String, allow_blank: false
@@ -1549,37 +1466,41 @@ class API < Grape::API
 			cand_obj_id = candidate_id(params[:ballot_name], params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year])
 			pers_obj_id = person_id(params[:ballot_name])
 
-			# error if object already exists			
-			if Vssc::Candidate.where(object_id: cand_obj_id).count > 0
-				#error_already_exists(cand_obj_id)
-			end
-
-			if Vssc::Person.where(object_id: pers_obj_id).count > 0
-				#error_already_exists(pers_obj_id)
-			end
-
-			# validate that election, party IDs exist
-			party = Vssc::Party.limit(100).find_by_object_id(params[:party_object_id])
-			if party.nil?
-				status 400
-				error_not_found(params[:party_object_id])
-			end
-
-
 			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
 			if e.nil?
 				status 400
 				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 
+			# error if object already exists			
+			if Vssc::Candidate.where(object_id: cand_obj_id).count > 0
+				error_already_exists(cand_obj_id)
+			end
+
+			# if person was created previously use that, otherwise create new person
+			if Vssc::Person.where(object_id: pers_obj_id).count > 0
+				p = Vssc::Person.all.find_by_object_id(pers_obj_id)
+				#return p
+			else
+				fullname = Vssc::InternationalizedText.new()
+				fullname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:full_name])
+
+				profession = Vssc::InternationalizedText.new()
+				profession.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:profession])
+
+				p = Vssc::Person.new(object_id: pers_obj_id, first_name: params[:first_name], middle_names: [params[:middle_name]], 
+				last_name: params[:last_name], prefix: params[:prefix], sufix: params[:suffix], profession: profession, full_name: fullname)
+			end
+
+			# validate that party ID exist
+			party = Vssc::Party.all.find_by_object_id(params[:party_object_id])
+			if party.nil?
+				status 400
+				error_not_found(params[:party_object_id])
+			end
+
 			ballotname = Vssc::InternationalizedText.new()
 			ballotname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
-
-			profession = Vssc::InternationalizedText.new()
-			profession.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:profession])
-
-			p = Vssc::Person.new(object_id: pers_obj_id, first_name: params[:first_name], middle_names: [params[:middle_name]], 
-				last_name: params[:last_name], prefix: params[:prefix], sufix: params[:suffix], profession: profession, full_name: ballotname)
 
 			if p.save
 				c = Vssc::Candidate.new(object_id: cand_obj_id, ballot_name: ballotname, person_identifier: p.id, party_identifier: party.id)
@@ -1604,11 +1525,19 @@ class API < Grape::API
 
 		desc "Detail a candidate"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
+			requires :date_month, type: Integer
+			requires :date_day, type: Integer
+			requires :date_year, type: Integer
+			requires :election_scope_ocdid, type: String, allow_blank: false
+
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:ocdid])
+			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
+			if e.nil?
+				status 400
+				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
+			end
 			
 			#e = Vssc::Election.where(id: params[:election_id]).first
 			#if e.nil?
@@ -1617,10 +1546,10 @@ class API < Grape::API
 			#end
 
 			# confirm OCDID exists and is a candidate
-			#c = e.candidates.find_by_object_id(params[:ocdid])
+			c = e.candidates.find_by_object_id(params[:object_id])
 
 			# temporary until elections work
-			c = Vssc::Candidate.find_by_object_id(params[:ocdid])
+			#c = Vssc::Candidate.find_by_object_id(params[:ocdid])
 
 			if c
 				p = Vssc::Person.where(id: c.person_identifier).first
@@ -1628,12 +1557,10 @@ class API < Grape::API
 					status 200
 					return [c,p]
 				else
-					status 400
-					error_not_found(params[:ocdid])
+					error_not_found(params[:object_id])
 				end
 			else
-				status 400
-				error_not_found(params[:ocdid])
+				error_not_found(params[:object_id])
 			end
 		end
 
@@ -1731,6 +1658,17 @@ class API < Grape::API
 	end
 
 	resource :people do
+
+		desc "List all people"
+		get do
+			return Vssc::Person.all.collect do |p|
+				{
+					object_id: p.object_id,
+					name: p.full_name.language_strings.where(language: "en-US").first.text
+				}
+			end
+		end
+
 		desc "Create a person"
 		params do
 			requires :first_name, type: String, allow_blank: false
@@ -1754,11 +1692,11 @@ class API < Grape::API
 			pers_obj_id = person_id(params[:full_name])
 
 			if Vssc::Person.where(object_id: pers_obj_id).count > 0
-				#error_already_exists(pers_obj_id)
+				error_already_exists(pers_obj_id)
 			end
 
 			fullname = Vssc::InternationalizedText.new()
-			fullname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
+			fullname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:full_name])
 
 			profession = Vssc::InternationalizedText.new()
 			profession.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:profession])
@@ -2234,10 +2172,9 @@ class API < Grape::API
 
 		desc "Create a new office"
 		params do
-			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String, allow_blank: false
 			requires :scope_ocdid, type: String, allow_blank: false, desc: "OCDID of office's jurisdictional scope"
-			requires :holder_ocdid, type: String, allow_blank: false, desc: "OCDID of current office holder"
+			requires :holder_object_id, type: String, allow_blank: false, desc: "OCDID of current office holder"
 			requires :deadline_month, type: Integer, desc: "Filing deadling month"
 			requires :deadline_day, type: Integer, desc: "Filing deadline day"
 			requires :deadline_year, type: Integer, desc: "Filing deadline year"
@@ -2262,50 +2199,47 @@ class API < Grape::API
 			requires :term_end_month, type: Integer, allow_blank: false
 			requires :term_end_day, type: Integer, allow_blank: false
 			requires :term_end_year, type: Integer, allow_blank: false
-			requires :term_type, type: Integer, allow_blank: false, desc: "Enum position based on enum in standard"
+			requires :term_type, type: String, allow_blank: false, desc: "Enum, must come from officetermtype"
 		end
 		post :create do
-			validate_ocdid(params[:ocdid])
 			validate_ocdid(params[:scope_ocdid])
-			validate_ocdid(params[:holder_ocdid])
 			validate_string_name(params[:name])
 			validate_string_name(params[:contact_name])
-			validate_ocdid_duplicate(params[:ocdid])
 			# verify phone numbers?
 
+			obj_id = office_id(params[:name], params[:scope_ocdid])
+
 			# error if object already exists
-			if Vssc::Office.where(object_id: params[:ocdid]).count > 0
-				error_already_exists(params[:ocdid])
+			if Vssc::Office.where(object_id: obj_id).count > 0
+				#error_already_exists(obj_id)
 			end
 
 			# validate that scope, holder OCDIDs exist
 			s = Vssc::ReportingUnit.find_by_object_id(params[:scope_ocdid])
 			if s.nil?
-				status 400
 				error_not_found(params[:scope_ocdid])
 			end
-			# person or candidate?
-			h = Vssc::Candidate.find_by_object_id(params[:holder_ocdid])
+
+			h = Vssc::Person.find_by_object_id(params[:holder_object_id])
 			if h.nil?
-				status 400
-				error_not_found(params[:holder_ocdid])
+				error_not_found(params[:holder_object_id])
 			end
 
 			#c = Vssc::ContactInformation.new(address_line: [params[:address_line]], email: [params[:email]], fax: [params[:fax]],
-				#name: params[:contact_name], phone: [params[:phone]], uri: [params[:uri]])
+			#	name: params[:contact_name], phone: [params[:phone]], uri: [params[:uri]])
 
 			#t = Vssc::Term(start_date: Date.new(params[:term_start_year], params[:term_start_month], params[:term_start_day]),
 			#	end_date: Date.new(params[:term_end_year], params[:term_end_month], params[:term_end_day]),
-			#	type: get_enum_by_index(Vssc::Enum::OfficeTermType, params[:term_type], "officetermtype"))
+			#	type: Vssc::Enum::OfficeTermType.find(params[:term_type]).to_s)
 
 			oname = Vssc::InternationalizedText.new()
 			oname.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:name])
 
-			# How does office holder work
-			o = Vssc::Office.new(object_id: params[:ocdid], name: oname, jurisdictional_scope_identifier: params[:scope_ocdid],
+			o = Vssc::Office.new(object_id: obj_id, name: oname, jurisdictional_scope_identifier: params[:scope_ocdid],
 				filing_deadline: DateTime.new(params[:deadline_year], params[:deadline_month], params[:deadline_day], 
 					params[:deadline_hour], params[:deadline_minute], 0, params[:deadline_timezone]),
 				is_partisan: params[:ispartisan])
+			o.office_holders << h
 			# contact_information: c, term: t, 
 
 			#if c.save

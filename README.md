@@ -130,8 +130,6 @@ Jurisdictions:
 Elections (WIP):
 
     Create election:
-        curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
-    Create election:
         curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "end_date_month": "11", "end_date_day": "6", "end_date_year": "2015", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
 
     Get all elections:
@@ -186,10 +184,9 @@ Candidate:
 
     Create candidates:
 
-        (incomplete)
-        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Lloyd Doggett", "party_object_id": "party:democratic/ocd-division/country:us/state:tx", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "II", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Lloyd Doggett", "full_name": "Lloyd Doggett", "party_object_id": "party:Democratic", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "II", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
 
-        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", ballot_name": "Susan Narvaiz", "party_object_id": "party:republican/ocd-division/country:us/state:tx", "first_name": "Susan", "middle_name": "Lea Clifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Susan Narvaiz", "full_name": "Susan Narvaiz", "party_object_id": "party:Republican", "first_name": "Susan", "middle_name": "LeaClifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
 
     update
 
@@ -197,15 +194,25 @@ Candidate:
 
     detail
 
-        curl -d '{"election_id": "congressional-35", "ocdid": "candidate:lloyd-doggett-1/"}' 'http://localhost:3000/api/v1/candidates/read' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "object_id": "candidate:Lloyd Doggett-election:ocd-division/country:us/state:tx/cd:35-11/6/2015"}' 'http://localhost:3000/api/v1/candidates/read' -H Content-Type:application/json
+
+    List all candidates in election: 
+
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015"}' 'http://localhost:3000/api/v1/candidates/' -H Content-Type:application/json
 
 Person
     curl -d '{"full_name": "Susan Narvaiz", "first_name": "Susan", "middle_name": "Lea Clifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/people/create' -H Content-Type:application/json
 
+List all people
+
+    curl 'http://localhost:3000/api/v1/people'
+
+
 Office: 
 
     Create (incomplete)
-        curl -d '{"ocdid": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35", "name": "Texas 35th Congressional District", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "holder_ocdid": "candidate:lloyd-doggett-1/", "deadline_year": "1", "deadline_month": "1", "deadline_day": "1", "deadline_hour": "1", "deadline_minute": "1", "deadline_timezone": "1", "ispartisan": "false", "address_line": "217 W Travis St, San Antonio, TX 78205", "email": "idontknow@tx.gov", "fax": "0", "contact_name": "Unknown", "phone": "(210) 704-1080", "uri": "http://doggett.house.gov/", "term_start_month": "1", "term_start_day": "3", "term_start_year": "2015", "term_end_month": "1", "term_end_day": "3", "term_end_year": "2017", "term_type": "0"}' 'http://localhost:3000/api/v1/offices/create' -H Content-Type:application/json
+
+        curl -d '{"name": "Texas 35th Congressional District", "scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "holder_object_id": "person:Lloyd Doggett", "deadline_year": "1", "deadline_month": "1", "deadline_day": "1", "deadline_hour": "1", "deadline_minute": "1", "deadline_timezone": "1", "ispartisan": "false", "address_line": "217 W Travis St, San Antonio, TX 78205", "email": "idontknow@tx.gov", "fax": "0", "contact_name": "Unknown", "phone": "(210) 704-1080", "uri": "http://doggett.house.gov/", "term_start_month": "1", "term_start_day": "3", "term_start_year": "2015", "term_end_month": "1", "term_end_day": "3", "term_end_year": "2017", "term_type": "0"}' 'http://localhost:3000/api/v1/offices/create' -H Content-Type:application/json
 
     Detail office:
 
@@ -231,7 +238,10 @@ Candidate Contest:
 
     Attach office to contest
 
-        curl -d '{"election_id": "congressional-35", "ocdid": "contest:tx-congressional-35/ocd-division/country:us/state:tx/cd:35", "office_ocdid": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/attach_office' -H Content-Type:application/json
+        curl -d '{"contest_object_id": "contest:Texas Congressional Representative, District 35-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "office_object_id": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/attach_office' -H Content-Type:application/json
+
+        curl -d '{"contest_object_id": "contest:Texas Congressional Representative, District 35-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "office_object_id": "office:tx-congressional-35/ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/detach_office' -H Content-Type:application/json
+
 
 Ballot Measure Contest:
 

@@ -43,3 +43,9 @@ echo "\n"
 curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"yes"}' 'http://localhost:3000/api/v1/ballot_measure_selections/create' -H Content-Type:application/json
 echo "\n"
 curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"No"}' 'http://localhost:3000/api/v1/ballot_measure_selections/create' -H Content-Type:application/json
+echo "\n"
+curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Lloyd Doggett", "full_name": "Lloyd Doggett", "party_object_id": "party:Democratic", "first_name": "Lloyd", "middle_name": "Alton", "last_name": "Doggett", "prefix": "", "suffix": "II", "profession": "Attorney"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
+echo "\n"
+curl -d '{"full_name": "Susan Narvaiz", "first_name": "Susan", "middle_name": "Lea Clifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/people/create' -H Content-Type:application/json
+echo "\n"
+curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "ballot_name": "Susan Narvaiz", "full_name": "Susan Narvaiz", "party_object_id": "party:Republican", "first_name": "Susan", "middle_name": "LeaClifford", "last_name": "Narvaiz", "prefix": "", "suffix": "", "profession": "CEO"}' 'http://localhost:3000/api/v1/candidates/create' -H Content-Type:application/json
