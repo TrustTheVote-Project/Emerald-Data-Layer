@@ -226,7 +226,7 @@ Candidate Contest:
 
     Create candidate contest:
 
-        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "Texas Congressional Representative, District 35", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "1ofm", "sequence_order": "0", "votes_allowed":"1"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
+        curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "Texas Congressional Representative, District 35", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TX Congress 35", "ballot_title": "Texas Congressional Representative, District 35", "ballot_subtitle": "Congressional representative for Texas Congressional District 35", "vote_variation_type": "1ofm", "sequence_order": "0", "votes_allowed":"1", "office_object_id":"office:Texas 35th Congressional District-ocd-division/country:us/state:tx/cd:35"}' 'http://localhost:3000/api/v1/candidate_contests/create' -H Content-Type:application/json
 
     Read detail on it:
 
@@ -252,9 +252,9 @@ Ballot Measure Contest:
 
         curl -d '{"object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015"}' 'http://localhost:3000/api/v1/ballot_measure_contests/read' -H Content-Type:application/json
 
-All contests: 
+All contests (see election for listing contests in an election)
 
-        curl -d '{"election_id": "congressional-35"}' 'http://localhost:3000/api/v1/contests' -H Content-Type:application/json
+       curl 'http://localhost:3000/api/v1/contests'
 
 Ballot Measure Selection: 
 

@@ -141,21 +141,6 @@ class API < Grape::API
 			!str.any? { |word| ocdid.include?(word) }
 		end
 
-		# eventually will determine if ocdid already exists
-		# both for use in checking if object has been created, and if it already has been created
-		def ocdid_exists(ocdid)
-			false
-		end
-
-		def get_enum_by_index(enum, index, descstring)
-			ret = enum.enums[(2 * index) + 1]
-			if ret
-				ret
-			else
-				error_enum_range(descstring, index)
-			end
-		end
-
 		def election_id(scope_ocdid, date_month, date_day, date_year)
 			"election:" + scope_ocdid + "-" + date_month.to_s + "/" + date_day.to_s + "/" + date_year.to_s
 		end
@@ -190,7 +175,7 @@ class API < Grape::API
 		desc "List jurisdictions"
 		get do
 			# return list of all jurisdictions
-			Vssc::ReportingUnit.limit(10).collect do |p|
+			Vssc::ReportingUnit.all.collect do |p|
 				{
 					id: p.id,
 					ocdid: p.object_id,
@@ -217,7 +202,6 @@ class API < Grape::API
 				end
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -241,7 +225,6 @@ class API < Grape::API
 				end
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -250,7 +233,7 @@ class API < Grape::API
 		params do
 			requires :ocdid, type: String, allow_blank: false
 			requires :name, type: String
-			#requires :elorg_name, type: String
+			#requires :elorg_name, type: String # Where is the field for election organization name?
 			requires :unit_type, type: String, desc: "Reporting unit type, must be a member of reporting_unit_type enum"
 		end
 		post :create do
@@ -269,7 +252,7 @@ class API < Grape::API
 			j.codes << c
 			
 			if j.save
-				status 200
+				status 201
 				return j
 			else
 				status 500
@@ -299,7 +282,6 @@ class API < Grape::API
 				return p
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -318,7 +300,6 @@ class API < Grape::API
 			attributes = params.dup
 			j = Vssc::ReportingUnit.find_by_object_id(attributes.delete(:ocdid))
 			if j.nil?
-				status 400
 				error_not_found(params[:ocdid])
 			else
 				# update selected jurisdiction
@@ -346,13 +327,11 @@ class API < Grape::API
 
 			p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
 			if p.nil?
-				status 400
-				return error_not_found(params[:ocdid])
+				error_not_found(params[:ocdid])
 			end
 
 			c = Vssc::ReportingUnit.find_by_object_id(params[:child_ocdid])
 			if c.nil?
-				status 400
 				error_not_found(params[:child_ocdid])
 			end
 
@@ -382,13 +361,11 @@ class API < Grape::API
 
 			p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
 			if p.nil?
-				status 400
 				return error_not_found(params[:ocdid])
 			end
 
 			c = p.composing_gp_units.find_by_object_id(params[:child_ocdid])
 			if c.nil?
-				status 400
 				error_not_found(params[:child_ocdid])
 			end
 
@@ -412,10 +389,9 @@ class API < Grape::API
 			s = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s)
 			s += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("splitprecinct").to_s)
 			s += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("combinedprecinct").to_s)
-			#return Vssc::ReportingUnit.limit(10).where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).collect do |p|
 			return s.collect do |p|
 				{
-					#id: p.id,
+					id: p.id,
 					ocdid: p.object_id,
 					type: p.reporting_unit_type
 				}
@@ -470,7 +446,6 @@ class API < Grape::API
 				end
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -509,7 +484,7 @@ class API < Grape::API
 			p.codes << c
 
 			if p.save
-				status 200
+				status 201
 				return p
 			else
 				status 500
@@ -550,7 +525,7 @@ class API < Grape::API
 			p.codes << c
 
 			if p.save
-				status 200
+				status 201
 				return p
 			else
 				status 500
@@ -591,7 +566,7 @@ class API < Grape::API
 			p.codes << c
 
 			if p.save
-				status 200
+				status 201
 				return p
 			else
 				status 500
@@ -605,16 +580,17 @@ class API < Grape::API
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-      		#p = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
-			p = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s).find_by_object_id(params[:ocdid])
-			if p
-				status 200
-				return p
-			else
-				# error if object does not exist
-				status 404
-				error_not_found(params[:ocdid])
+
+			s = Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("precinct").to_s)
+			s += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("splitprecinct").to_s)
+			s += Vssc::ReportingUnit.where(reporting_unit_type: Vssc::Enum::ReportingUnitType.find("combinedprecinct").to_s)
+			s.collect do |p|
+				if p.object_id == params[:ocdid]
+					status 200
+					return p
+				end
 			end
+			error_not_found(params[:ocdid])
 		end
 
 		desc "Update selected precinct"
@@ -736,7 +712,7 @@ class API < Grape::API
 		desc "List all districts"
 		get do
 			# list electoral districts
-			return Vssc::ReportingUnit.limit(10).where(is_electoral_district: true).collect do |d|
+			return Vssc::ReportingUnit.all.where(is_electoral_district: true).collect do |d|
 				{
 					id: d.id,
 					ocdid: d.object_id
@@ -763,7 +739,6 @@ class API < Grape::API
 				end
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -818,14 +793,12 @@ class API < Grape::API
 			validate_ocdid(params[:ocdid])
 			# display info on the district
 
-  			#d = Vssc::ReportingUnit.find_by_object_id(params[:ocdid])
       		d = Vssc::ReportingUnit.where(is_electoral_district: true).find_by_object_id(params[:ocdid])
 			if d
 				status 200
 				return d
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(params[:ocdid])
 			end
 		end
@@ -891,9 +864,7 @@ class API < Grape::API
 					break
 				end
 			end
-			#p = ps.where(object_id: params[:precinct_ocdid]).first
 			if p.nil?
-				status 400
 				return error_not_found(params[:precinct_ocdid])
 			end
 
@@ -963,7 +934,7 @@ class API < Grape::API
 	resource :elections do
 		desc "List all elections"
 		get do
-			return Vssc::Election.limit(10).collect do |e|
+			return Vssc::Election.all.collect do |e|
 				{
 					id: e.id,
 					#name: e.name,
@@ -1016,8 +987,7 @@ class API < Grape::API
 			# validate whether scope OCDID is proper
 			s = Vssc::GpUnit.find_by_object_id(params[:scope_ocdid])
 			if s.nil?
-				status 400
-				return error_not_found(params[:scope_ocdid])
+				error_not_found(params[:scope_ocdid])
 			end
 
 			if Vssc::Election.where(election_scope_identifier: params[:scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).count > 0
@@ -1056,7 +1026,6 @@ class API < Grape::API
 				return e
 			else
 				# error if object does not exist
-				status 404
 				error_not_found(election_id(params[:scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 		end
@@ -1206,13 +1175,9 @@ class API < Grape::API
 
 	resource :candidate_contests do
 		desc "List all candidate contests"
-		#params do
-		#	requires :election_id, type: String, allow_blank: false
-		#end
-		#post do
 		get do
 			status 200
-			return Vssc::CandidateContest.limit(10).collect do |cc|
+			return Vssc::CandidateContest.all.collect do |cc|
 				{
 					id: cc.id,
 					object_id: cc.object_id
@@ -1227,6 +1192,8 @@ class API < Grape::API
 			requires :date_day, type: Integer
 			requires :date_year, type: Integer
 			requires :election_scope_ocdid, type: String, allow_blank: false
+
+			requires :office_object_id, type: String, allow_blank: false
 
 			requires :name, type: String, allow_blank: false, desc: "Name of contest, e.g. \"Governor.\""
 			requires :jurisdiction_scope_ocdid, type: String, allow_blank: false, desc: "OCDID of jurisdiction scope"
@@ -1253,15 +1220,18 @@ class API < Grape::API
 
 			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
 			if e.nil?
-				status 404
 				error_not_found(election_id(params[:election_scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 
 			# verify scope ocdid exists
 			s = Vssc::ReportingUnit.find_by_object_id(params[:jurisdiction_scope_ocdid])
 			if s.nil?
-				status 404
 				error_not_found(params[:scope_ocdid])
+			end
+
+			o = Vssc::Office.find_by_object_id(params[:office_object_id]) 
+			if o.nil?
+				error_not_found(params[:office_object_id])
 			end
 
 			title = Vssc::InternationalizedText.new()
@@ -1275,6 +1245,8 @@ class API < Grape::API
 
 			# attach contest to election
 			e.contests << cc
+			# attach office to contest
+			cc.offices << o
 
 			if cc.save
 				if e.save
@@ -1820,6 +1792,19 @@ class API < Grape::API
 		end
 	end
 
+	resource :contests do
+		desc "List all contests"
+		get do
+			status 200
+			return Vssc::Contest.all.collect do |c|
+				{
+					id: c.id,
+					object_id: c.object_id
+				}
+			end
+		end
+	end
+
 	resource :ballot_measure_contests do
 		desc "List all ballot measure contests"
 		#params do
@@ -2113,22 +2098,6 @@ class API < Grape::API
 		end
 	end
 
-	resource :contests do
-		desc "List all contests under a certain election, both candidate and ballot measure"
-		params do
-			requires :election_id, type: String, allow_blank: false
-		end
-		post do
-			status 200
-			return Vssc::Contest.limit(10).collect do |cc|
-				{
-					id: cc.id,
-					object_id: cc.object_id
-				}
-			end
-		end
-	end
-
 	resource :ballot_specs do
 		desc "List all ballot specs of an election"
 		params do
@@ -2162,10 +2131,10 @@ class API < Grape::API
 	resource :offices do
 		desc "List all offices"
 		get do
-			return Vssc::Office.limit(10).collect do |o|
+			return Vssc::Office.all.collect do |o|
 				{
 					id: o.id,
-					ocdid: o.object_id
+					object_id: o.object_id
 				}
 			end
 		end
@@ -2211,7 +2180,7 @@ class API < Grape::API
 
 			# error if object already exists
 			if Vssc::Office.where(object_id: obj_id).count > 0
-				#error_already_exists(obj_id)
+				error_already_exists(obj_id)
 			end
 
 			# validate that scope, holder OCDIDs exist
@@ -2270,11 +2239,11 @@ class API < Grape::API
 
 		desc "Detail an office"
 		params do
-			requires :ocdid, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
 			validate_ocdid(params[:ocdid])
-      		o = Vssc::Office.find_by_object_id(params[:ocdid])
+      		o = Vssc::Office.find_by_object_id(params[:object_id])
 			if o
 				status 200
 				return o
