@@ -220,6 +220,10 @@ class API < Grape::API
 		def party_id(name)
 			"party:" + name
 		end
+
+		def ballot_measure_selection_id(selection, contest_id)
+			"ballot_measure_selection:" + selection + "-" + contest_id
+		end
 	end
 
 	resource :jurisdictions do
@@ -1095,7 +1099,7 @@ class API < Grape::API
 			else
 				# error if object does not exist
 				status 404
-				error_not_found(params[:scope_ocdid] + " " + params[:date_month].to_s + "/" + params[:date_day].to_s + "/" + params[:date_year].to_s)
+				error_not_found(election_id(params[:scope_ocdid], params[:date_month], params[:date_day], params[:date_year]))
 			end
 		end
 
@@ -1936,7 +1940,7 @@ class API < Grape::API
 
 			# error if object already exists			
 			if Vssc::BallotMeasureContest.where(object_id: obj_id).count > 0
-				#error_already_exists(obj_id)
+				error_already_exists(obj_id)
 			end
 
 			e = Vssc::Election.where(election_scope_identifier: params[:election_scope_ocdid]).where(date: Date.new(params[:date_year], params[:date_month], params[:date_day])).first
@@ -2011,7 +2015,7 @@ class API < Grape::API
 			else
 				# error if object does not exist
 				status 404
-				error_not_found(params[:ocdid])
+				error_not_found(params[:object_id])
 			end
 		end
 
@@ -2055,91 +2059,119 @@ class API < Grape::API
 		end
 	end
 
-	resource :ballot_measure_selection do
+	resource :ballot_measure_selections do
 		desc "List all ballot measure selections for a contest"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
-			requires :contest_ocdid, type: String, allow_blank: false
+			#requires :election_id, type: String, allow_blank: false
+			requires :contest_object_id, type: String, allow_blank: false
 		end
 		post do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid(params[:contest_ocdid])
+			# list ballot measure contests in contest
+			s = Vssc::BallotMeasureContest.find_by_object_id(params[:contest_object_id])
+			if s.nil?
+				return error_not_found(params[:contest_object_id])
+			end
 			status 200
-			# list selections for a contest
-			if params[:election_ocdid] == ocd_election
-				if params[:contest_ocdid] == ocd_referendum
-					[ocd_referendum_response_yes,ocd_referendum_response_no]
-				else
-					error_invalid(params[:contest_ocdid])
-				end
-			else
-				error_invalid(params[:election_ocdid])
+			return s.ballot_selections.collect do |e|
+				{
+					id: e.id,
+					#name: e.name,
+					object_id: e.object_id
+				}
 			end
 		end
 
 		desc "Create a ballot measure selection"
 		params do
-			requires :election_ocdid, type: String, allow_blank: false
-			requires :contest_ocdid, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
+			# election fields
+			#requires :date_month, type: Integer
+			#requires :date_day, type: Integer
+			#requires :date_year, type: Integer
+			#requires :election_scope_ocdid, type: String, allow_blank: false
+
+			requires :contest_object_id, type: String, allow_blank: false
 			requires :selection, type: String
 		end
 		post :create do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid(params[:contest_ocdid])
-			validate_ocdid(params[:ocdid])
-			# create a ballot measure selection
-			validate_ocdid_duplicate(params[:ocdid])
+			#validate_ocdid(params[:election_scope_ocdid])
 
-			# dummy message for testing
-			"creating selection " + params[:selection] + " in contest " + params[:ocdid]
+			obj_id = ballot_measure_selection_id(params[:selection], params[:contest_object_id])
+
+			# error if object already exists
+			if Vssc::BallotMeasureSelection.where(object_id: obj_id).count > 0
+				error_already_exists(obj_id)
+			end
+
+			c = Vssc::BallotMeasureContest.find_by_object_id(params[:contest_object_id])
+			if c.nil?
+				return error_not_found(params[:contest_object_id])
+			end
+
+			selection = Vssc::InternationalizedText.new()
+			selection.language_strings << Vssc::LanguageString.new(language: "en-US", text: params[:selection])
+
+			s = Vssc::BallotMeasureSelection.new(object_id: obj_id, selection: selection)
+
+			c.ballot_selections << s
+
+			if s.save
+				if c.save
+					status 201
+					return s.to_json(:include => {:selection => { :include => :language_strings}})
+				else
+					status 500
+					return c.errors
+				end
+			else
+				status 500
+				return s.errors
+			end
 		end
 
 		desc "Detail a ballot measure selection"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :contest_ocdid, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 		end
 		post :read do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid(params[:contest_ocdid])
-			validate_ocdid(params[:ocdid])
-			status 200
-			# detail the selected selection
-			if params[:election_id] == ocd_election
-				if params[:contest_ocdid] == ocd_referendum
-					if params[:selection_ocdid] == ocd_referendum_response_yes
-						data_referendum_response_yes
-					elsif params[:selection_ocdid] == ocd_referendum_response_no
-						data_referendum_response_no
-					else
-						error_invalid(params[:selection_ocdid])
-					end
-				else
-					error_invalid(params[:contest_ocdid])
-				end
+			s = Vssc::BallotMeasureSelection.find_by_object_id(params[:object_id])
+			if s
+				status 200
+				return s
 			else
-				error_invalid(params[:election_id])
+				# error if object does not exist
+				status 404
+				error_not_found(params[:object_id])
 			end
 		end
 
 		desc "Update a ballot measure selection"
 		params do
-			requires :election_id, type: String, allow_blank: false
-			requires :contest_ocdid, type: String, allow_blank: false
-			requires :ocdid, type: String, allow_blank: false
+			requires :object_id, type: String, allow_blank: false
 			requires :selection, type: String
 		end
 		post :update do
-			validate_ocdid(params[:election_ocdid])
-			validate_ocdid(params[:contest_ocdid])
-			validate_ocdid(params[:ocdid])
-			# update the selected selection
-
-			status 200
-			# dummy message for testing
-			"updating"
+			# error if object does not exist
+			attributes = params.dup
+			s = Vssc::BallotMeasureSelection.find_by_object_id(attributes.delete(:object_id))
+			if s.nil?
+				status 400
+				error_not_found(params[:object_id])
+			else
+				# update selected party
+				# TODO: attributes list needs to be sanitized and probably gem updated to allow mass assignment
+				# only update if string not empty
+				if params[:selection].length > 0
+					s.selection.language_strings[0].text = params[:selection]
+				end
+				if s.save
+					status 200
+					# Include name data
+					return s.to_json(:include => {:selection => { :include => :language_strings}})
+				else
+					status 500
+					return s.errors
+				end
+			end
 		end
 	end
 

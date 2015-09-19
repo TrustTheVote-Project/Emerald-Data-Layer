@@ -37,3 +37,9 @@ echo "\n"
 curl -d '{"name": "Green", "color": "#0BDA51", "abbreviation": "GRN"}' 'http://localhost:3000/api/v1/parties/create' -H Content-Type:application/json
 echo "\n"
 curl -d '{"scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "end_date_month": "11", "end_date_day": "6", "end_date_year": "2015", "name": "November Primary", "election_type": "primary"}' 'http://localhost:3000/api/v1/elections/create' -H Content-Type:application/json
+echo "\n"
+curl -d '{"election_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "date_month": "11", "date_day": "6", "date_year": "2015", "name": "TestName", "jurisdiction_scope_ocdid": "ocd-division/country:us/state:tx/cd:35", "abbreviation": "TestAbbreviation", "ballot_title": "TestBallotTitle", "ballot_subtitle": "TestBallotSubtitle", "ballot_measure_type": "ballotmeasure", "sequence_order": "0", "pro_statement": "TestPro", "con_statement": "TestCon", "passage_threshold": "60%", "full_text": "Test Full Text", "summary_text": "Test Summary Text", "effect_of_abstain": "Test Abstain Effect"}' 'http://localhost:3000/api/v1/ballot_measure_contests/create' -H Content-Type:application/json
+echo "\n"
+curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"yes"}' 'http://localhost:3000/api/v1/ballot_measure_selections/create' -H Content-Type:application/json
+echo "\n"
+curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"No"}' 'http://localhost:3000/api/v1/ballot_measure_selections/create' -H Content-Type:application/json

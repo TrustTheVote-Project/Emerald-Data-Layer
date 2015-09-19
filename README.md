@@ -245,3 +245,17 @@ Ballot Measure Contest:
 All contests: 
 
         curl -d '{"election_id": "congressional-35"}' 'http://localhost:3000/api/v1/contests' -H Content-Type:application/json
+
+Ballot Measure Selection: 
+
+    create
+        curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"yes"}' 'http://localhost:3000/api/v1/ballot_measure_selections/create' -H Content-Type:application/json
+
+        curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"No"}' 'http://localhost:3000/api/v1/ballot_measure_selections/create' -H Content-Type:application/json
+
+    update
+        curl -d '{"object_id": "ballot_measure_selection:yes-contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015", "selection":"Yes"}' 'http://localhost:3000/api/v1/ballot_measure_selections/update' -H Content-Type:application/json
+
+    list
+
+        curl -d '{"contest_object_id": "contest:TestName-election:ocd-division/country:us/state:tx/cd:35-11/6/2015"}' 'http://localhost:3000/api/v1/ballot_measure_selections' -H Content-Type:application/json
